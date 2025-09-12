@@ -38,8 +38,42 @@ export const noteService = {
 
     // Download note
     downloadNote: async (id) => {
-        const response = await api.get(`/notes/${id}/download`);
-        return response.data;
+        try {
+            const response = await api.get(`/notes/${id}/download`, {
+                timeout: 30000, // 30 seconds for download requests
+            });
+
+            // Validate response data
+            if (!response.data || !response.data.data) {
+                throw new Error('Invalid response format');
+            }
+
+            const { downloadUrl, fileName } = response.data.data;
+
+            if (!downloadUrl) {
+                throw new Error('Download URL not provided');
+            }
+
+            if (!fileName) {
+                throw new Error('File name not provided');
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('Download note service error:', error);
+
+            if (error.response) {
+                // Server responded with error status
+                const errorMessage = error.response.data?.message || 'Failed to download note';
+                throw new Error(errorMessage);
+            } else if (error.request) {
+                // Network error
+                throw new Error('Network error. Please check your connection and try again.');
+            } else {
+                // Other error
+                throw new Error(error.message || 'An unexpected error occurred');
+            }
+        }
     },
 
     // Generate share link

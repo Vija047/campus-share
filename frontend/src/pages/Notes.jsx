@@ -18,11 +18,13 @@ import {
 import LoadingSpinner from '../components/common/LoadingSpinner.jsx';
 import Button from '../components/common/Button.jsx';
 import toast from 'react-hot-toast';
+import { downloadFile, downloadFileSimple } from '../utils/downloadUtils.js';
 
 const Notes = () => {
     const { user } = useAuth();
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [downloadingNotes, setDownloadingNotes] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
         semester: '',
@@ -90,19 +92,51 @@ const Notes = () => {
     };
 
     const handleDownload = async (noteId) => {
+        // Prevent multiple simultaneous downloads of the same note
+        if (downloadingNotes.has(noteId)) {
+            return;
+        }
+
         try {
+            // Add note to downloading set
+            setDownloadingNotes(prev => new Set([...prev, noteId]));
+
+            // Show loading toast
+            const loadingToast = toast.loading('Preparing download...');
+
             const response = await noteService.downloadNote(noteId);
+            const { downloadUrl, fileName } = response.data;
 
-            // Create download link
-            const link = document.createElement('a');
-            link.href = response.data.downloadUrl;
-            link.download = response.data.fileName;
-            link.click();
+            // Update toast
+            toast.dismiss(loadingToast);
+            toast.loading('Downloading file...');
 
-            toast.success('Note downloaded successfully');
+            // Try to download using the blob approach first for better compatibility
+            try {
+                await downloadFile(downloadUrl, fileName);
+                toast.dismiss();
+                toast.success(`"${fileName}" downloaded successfully`);
+            } catch (blobError) {
+                console.warn('Blob download failed, trying simple download:', blobError);
+                // Fallback to simple download
+                downloadFileSimple(downloadUrl, fileName);
+                toast.dismiss();
+                toast.success(`Download started for "${fileName}"`);
+            }
         } catch (error) {
             console.error('Error downloading note:', error);
-            toast.error('Failed to download note');
+            toast.dismiss();
+
+            // Show specific error message
+            const errorMessage = error.message || 'Failed to download note. Please try again.';
+            toast.error(errorMessage);
+        } finally {
+            // Remove note from downloading set
+            setDownloadingNotes(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(noteId);
+                return newSet;
+            });
         }
     };
 
@@ -129,7 +163,7 @@ const Notes = () => {
         try {
             console.log('Attempting to bookmark note:', noteId);
             console.log('Current user:', user);
-            
+
             if (!noteId) {
                 toast.error('Invalid note ID');
                 return;
@@ -144,29 +178,29 @@ const Notes = () => {
 
             const response = await noteService.toggleBookmark(noteId);
             console.log('Bookmark response:', response);
-            
+
             toast.success(response.message);
 
             // Update the notes list to reflect bookmark status
             setNotes(notes.map(note =>
                 note._id === noteId
-                    ? { 
-                        ...note, 
+                    ? {
+                        ...note,
                         isBookmarked: response.data.isBookmarked,
-                        bookmarkLoading: false 
+                        bookmarkLoading: false
                     }
                     : note
             ));
         } catch (error) {
             console.error('Error bookmarking note:', error);
-            
+
             // Remove loading state
             setNotes(notes.map(note =>
                 note._id === noteId
                     ? { ...note, bookmarkLoading: false }
                     : note
             ));
-            
+
             // More detailed error messaging
             let errorMessage = 'Failed to bookmark note';
             if (error.response?.data?.message) {
@@ -178,7 +212,7 @@ const Notes = () => {
             } else if (error.code === 'ERR_NETWORK') {
                 errorMessage = 'Network error. Please check your connection.';
             }
-            
+
             toast.error(errorMessage);
         }
     };
@@ -402,8 +436,9 @@ const Notes = () => {
                                             onClick={() => handleDownload(note._id)}
                                             icon={Download}
                                             className="flex-1"
+                                            disabled={downloadingNotes.has(note._id)}
                                         >
-                                            Download
+                                            {downloadingNotes.has(note._id) ? 'Downloading...' : 'Download'}
                                         </Button>
                                         <Button
                                             size="sm"
@@ -418,6 +453,7 @@ const Notes = () => {
                                             variant={note.isBookmarked ? "primary" : "outline"}
                                             onClick={() => handleBookmark(note._id)}
                                             icon={Bookmark}
+                                            disabled={note.bookmarkLoading}
                                             title={note.isBookmarked ? "Remove from bookmarks" : "Add to bookmarks"}
                                         >
                                         </Button>

@@ -37,7 +37,7 @@ api.interceptors.response.use(
     },
     (error) => {
         console.error('API Error:', error);
-        
+
         // Handle network errors
         if (!error.response) {
             console.error('Network error or server not responding');

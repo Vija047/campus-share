@@ -10,7 +10,8 @@ import {
     FileText,
     Calendar,
     Award,
-    Eye
+    Eye,
+    RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -20,6 +21,14 @@ import { postService } from '../services/postService';
 
 const Dashboard = () => {
     const { user } = useAuth();
+
+    // Helper function to get time-based greeting
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good morning';
+        if (hour < 17) return 'Good afternoon';
+        return 'Good evening';
+    };
     const [stats, setStats] = useState({
         totalNotes: 0,
         totalPosts: 0,
@@ -30,10 +39,13 @@ const Dashboard = () => {
     const [recentPosts, setRecentPosts] = useState([]);
     const [bookmarkedNotes, setBookmarkedNotes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [lastUpdated, setLastUpdated] = useState(null);
 
     const fetchDashboardData = useCallback(async () => {
         try {
             setIsLoading(true);
+            setError(null);
 
             // Check if user is authenticated before making requests
             if (!user) {
@@ -53,7 +65,7 @@ const Dashboard = () => {
                         totalNotes: stats.notesUploaded || 0,
                         totalPosts: recentActivity.posts?.length || 0,
                         bookmarkedNotes: 0, // Will be updated when bookmark endpoint is available
-                        recentViews: 0 // Will be updated when recent views endpoint is available
+                        recentViews: userRecentNotes.length || 0 // Use recent notes as proxy for recent views
                     });
 
                     // Set recent notes from user's uploaded notes
@@ -128,9 +140,43 @@ const Dashboard = () => {
                         }
                         return prev;
                     });
+
+                    // Update stats with actual data
+                    setStats(prev => ({
+                        ...prev,
+                        totalPosts: Math.max(prev.totalPosts, communityPosts.length),
+                        recentViews: userRecentNotes.length
+                    }));
                 }
             } catch (error) {
                 console.error('Error fetching community posts:', error);
+            }
+
+            // Fetch bookmarked notes
+            try {
+                const bookmarksResponse = await noteService.getBookmarkedNotes(1);
+                if (bookmarksResponse.success && bookmarksResponse.data.notes) {
+                    const formattedBookmarks = bookmarksResponse.data.notes.map(note => ({
+                        id: note._id,
+                        title: note.title,
+                        subject: note.subject || 'General',
+                        downloads: note.downloads || 0
+                    }));
+                    setBookmarkedNotes(formattedBookmarks);
+
+                    // Update bookmarked count in stats
+                    setStats(prev => ({
+                        ...prev,
+                        bookmarkedNotes: bookmarksResponse.data.notes.length
+                    }));
+                }
+            } catch (error) {
+                console.error('Error fetching bookmarks:', error);
+                // Fallback to placeholder data if bookmarks API is not available
+                setBookmarkedNotes([
+                    { id: 1, title: 'Bookmark functionality available', subject: 'Various', downloads: 0 },
+                    { id: 2, title: 'Click on notes to bookmark them', subject: 'Tutorial', downloads: 0 }
+                ]);
             }
 
             // For now, set some placeholder bookmarked notes
@@ -142,6 +188,7 @@ const Dashboard = () => {
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
+            setError('Failed to load dashboard data. Please try refreshing the page.');
 
             // Handle authentication errors
             if (error.response?.status === 401) {
@@ -161,6 +208,7 @@ const Dashboard = () => {
             setBookmarkedNotes([]);
         } finally {
             setIsLoading(false);
+            setLastUpdated(new Date());
         }
     }, [user]);
 
@@ -172,64 +220,90 @@ const Dashboard = () => {
         return <LoadingSpinner />;
     }
 
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-50 py-6">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <div className="text-red-600 text-lg font-medium mb-2">
+                            {error}
+                        </div>
+                        <button
+                            onClick={fetchDashboardData}
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50 py-6">
+        <div className="min-h-screen bg-gray-50 py-6 animate-fadeIn">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Welcome Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">
-                        Welcome back, {user?.name}!
-                    </h1>
-                    <p className="text-gray-600 mt-2">
-                        Here's what's happening in your academic journey
-                    </p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">
+                                {getGreeting()}, {user?.name}!
+                            </h1>
+                            <p className="text-gray-600 mt-2">
+                                Here's what's happening in your academic journey
+                                {lastUpdated && (
+                                    <span className="text-sm text-gray-500 block mt-1">
+                                        Last updated: {lastUpdated.toLocaleTimeString()}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                        <button
+                            onClick={fetchDashboardData}
+                            disabled={isLoading}
+                            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <Link to="/notes" className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow duration-200 cursor-pointer group block">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Total Notes</p>
-                                <p className="text-3xl font-bold text-blue-600">{stats.totalNotes}</p>
+                                <p className="text-3xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors">{stats.totalNotes}</p>
                             </div>
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                                 <BookOpen className="w-6 h-6 text-blue-600" />
                             </div>
                         </div>
-                    </div>
+                    </Link>
 
-                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Community Posts</p>
-                                <p className="text-3xl font-bold text-green-600">{stats.totalPosts}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                                <MessageSquare className="w-6 h-6 text-green-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                   
+                    <Link to="/bookmarks" className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow duration-200 cursor-pointer group block">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Bookmarked</p>
-                                <p className="text-3xl font-bold text-purple-600">{stats.bookmarkedNotes}</p>
+                                <p className="text-3xl font-bold text-purple-600 group-hover:text-purple-700 transition-colors">{stats.bookmarkedNotes}</p>
                             </div>
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
                                 <Bookmark className="w-6 h-6 text-purple-600" />
                             </div>
                         </div>
-                    </div>
+                    </Link>
 
-                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow duration-200 cursor-pointer group">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Recent Views</p>
-                                <p className="text-3xl font-bold text-orange-600">{stats.recentViews}</p>
+                                <p className="text-3xl font-bold text-orange-600 group-hover:text-orange-700 transition-colors">{stats.recentViews}</p>
                             </div>
-                            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center group-hover:bg-orange-200 transition-colors">
                                 <Eye className="w-6 h-6 text-orange-600" />
                             </div>
                         </div>
@@ -259,7 +333,11 @@ const Dashboard = () => {
                                 <div className="space-y-4">
                                     {recentNotes.length > 0 ? (
                                         recentNotes.map((note) => (
-                                            <div key={note.id} className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                            <Link
+                                                key={note.id}
+                                                to={`/notes/${note.id}`}
+                                                className="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                                            >
                                                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
                                                     {note.type === 'question_paper' ? (
                                                         <FileText className="w-5 h-5 text-blue-600" />
@@ -271,7 +349,7 @@ const Dashboard = () => {
                                                     <h3 className="font-medium text-gray-900">{note.title}</h3>
                                                     <p className="text-sm text-gray-500">{note.subject} • {note.viewedAt}</p>
                                                 </div>
-                                            </div>
+                                            </Link>
                                         ))
                                     ) : (
                                         <div className="text-center py-8">
@@ -329,19 +407,13 @@ const Dashboard = () => {
                                     to="/upload"
                                     className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-center block"
                                 >
-                                    Upload Notes
+                                    📚 Upload Notes
                                 </Link>
                                 <Link
-                                    to="/community"
-                                    className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors text-center block"
+                                    to="/notes"
+                                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-center block"
                                 >
-                                    Join Community
-                                </Link>
-                                <Link
-                                    to="/chat"
-                                    className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors text-center block"
-                                >
-                                    Start Chat
+                                    🔍 Browse Notes
                                 </Link>
                             </div>
                         </div>
@@ -350,50 +422,6 @@ const Dashboard = () => {
 
                 {/* Community & Bookmarks Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-                    {/* Community Activity */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                        <div className="p-6 border-b border-gray-200">
-                            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                                <Users className="w-5 h-5 mr-2 text-green-600" />
-                                Community Activity
-                            </h2>
-                        </div>
-                        <div className="p-6">
-                            <div className="space-y-4">
-                                {recentPosts.length > 0 ? (
-                                    recentPosts.map((post) => (
-                                        <div key={post.id} className="p-4 bg-gray-50 rounded-lg">
-                                            <h4 className="font-medium text-gray-900 mb-2">{post.title}</h4>
-                                            <div className="flex items-center text-sm text-gray-500">
-                                                <span>by {post.author}</span>
-                                                <span className="mx-2">•</span>
-                                                <span>{post.replies} replies</span>
-                                                <span className="mx-2">•</span>
-                                                <span>{post.time}</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                        <p className="text-gray-500">No community posts available</p>
-                                        <Link
-                                            to="/community"
-                                            className="text-green-600 hover:text-green-700 text-sm font-medium mt-2 inline-block"
-                                        >
-                                            Join community
-                                        </Link>
-                                    </div>
-                                )}
-                            </div>
-                            <Link
-                                to="/community"
-                                className="w-full mt-4 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-center block"
-                            >
-                                View All Posts
-                            </Link>
-                        </div>
-                    </div>
 
                     {/* Bookmarked Notes */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -407,13 +435,17 @@ const Dashboard = () => {
                             <div className="space-y-4">
                                 {bookmarkedNotes.length > 0 ? (
                                     bookmarkedNotes.map((note) => (
-                                        <div key={note.id} className="p-4 bg-gray-50 rounded-lg">
+                                        <Link
+                                            key={note.id}
+                                            to={`/notes/${note.id}`}
+                                            className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                        >
                                             <h4 className="font-medium text-gray-900 mb-2">{note.title}</h4>
                                             <div className="flex items-center justify-between text-sm text-gray-500">
                                                 <span>{note.subject}</span>
                                                 <span>{note.downloads} downloads</span>
                                             </div>
-                                        </div>
+                                        </Link>
                                     ))
                                 ) : (
                                     <div className="text-center py-8">

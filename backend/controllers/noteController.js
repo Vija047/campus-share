@@ -202,7 +202,9 @@ export const getNotes = async (req, res) => {
             const user = await User.findById(req.user.id);
             notesWithBookmarkStatus = notes.map(note => ({
                 ...note.toObject(),
-                isBookmarked: user.bookmarkedNotes.includes(note._id)
+                isBookmarked: user.bookmarkedNotes && user.bookmarkedNotes.some(
+                    bookmarkId => bookmarkId.toString() === note._id.toString()
+                )
             }));
         } else {
             notesWithBookmarkStatus = notes.map(note => ({
@@ -370,11 +372,22 @@ export const downloadNote = async (req, res) => {
             }
         }
 
+        // Prepare download URL with appropriate flags for better downloading
+        let downloadUrl = note.fileURL;
+
+        // If it's a Cloudinary URL, add download flags
+        if (downloadUrl.includes('cloudinary.com')) {
+            const separator = downloadUrl.includes('?') ? '&' : '?';
+            downloadUrl = `${downloadUrl}${separator}fl_attachment:${encodeURIComponent(note.fileName)}`;
+        }
+
         res.json({
             success: true,
             data: {
-                downloadUrl: note.fileURL,
-                fileName: note.fileName
+                downloadUrl: downloadUrl,
+                fileName: note.fileName,
+                fileSize: note.fileSize,
+                mimeType: note.mimeType
             }
         });
     } catch (error) {
@@ -430,11 +443,13 @@ export const toggleBookmark = async (req, res) => {
     try {
         console.log('Toggle bookmark request:', {
             noteId: req.params.id,
-            userId: req.user?.id
+            userId: req.user?.id,
+            userObject: req.user
         });
 
         // Validate note ID format
         if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            console.log('Invalid note ID format:', req.params.id);
             return res.status(400).json({
                 success: false,
                 message: 'Invalid note ID format'
@@ -444,6 +459,7 @@ export const toggleBookmark = async (req, res) => {
         const note = await Note.findById(req.params.id);
 
         if (!note) {
+            console.log('Note not found:', req.params.id);
             return res.status(404).json({
                 success: false,
                 message: 'Note not found'
@@ -451,8 +467,9 @@ export const toggleBookmark = async (req, res) => {
         }
 
         const user = await User.findById(req.user.id);
-        
+
         if (!user) {
+            console.log('User not found:', req.user.id);
             return res.status(404).json({
                 success: false,
                 message: 'User not found'
@@ -468,23 +485,35 @@ export const toggleBookmark = async (req, res) => {
             noteId => noteId.toString() === note._id.toString()
         );
 
+        console.log('Current bookmark status:', {
+            isBookmarked,
+            bookmarkedNotes: user.bookmarkedNotes,
+            noteId: note._id
+        });
+
+        let updatedUser;
         if (isBookmarked) {
-            // Remove bookmark
-            user.bookmarkedNotes = user.bookmarkedNotes.filter(
-                noteId => noteId.toString() !== note._id.toString()
+            // Remove bookmark using $pull operator
+            updatedUser = await User.findByIdAndUpdate(
+                req.user.id,
+                { $pull: { bookmarkedNotes: note._id } },
+                { new: true, runValidators: false }
             );
         } else {
-            // Add bookmark
-            user.bookmarkedNotes.push(note._id);
+            // Add bookmark using $addToSet operator (prevents duplicates)
+            updatedUser = await User.findByIdAndUpdate(
+                req.user.id,
+                { $addToSet: { bookmarkedNotes: note._id } },
+                { new: true, runValidators: false }
+            );
         }
-
-        await user.save();
 
         console.log('Bookmark toggled successfully:', {
             noteId: note._id,
-            userId: user._id,
+            userId: updatedUser._id,
             wasBookmarked: isBookmarked,
-            nowBookmarked: !isBookmarked
+            nowBookmarked: !isBookmarked,
+            newBookmarkedNotes: updatedUser.bookmarkedNotes
         });
 
         res.json({
