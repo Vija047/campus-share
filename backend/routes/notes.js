@@ -17,6 +17,11 @@ import { uploadLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
+// Health check endpoint
+router.get('/health', (req, res) => {
+    res.json({ success: true, message: 'Notes API is working' });
+});
+
 // Validation middleware
 const uploadValidation = [
     body('title')

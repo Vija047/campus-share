@@ -52,11 +52,16 @@ export const noteService = {
     toggleBookmark: async (id) => {
         try {
             console.log('Calling toggle bookmark API for note:', id);
-            const response = await api.post(`/notes/${id}/bookmark`);
+            const response = await api.post(`/notes/${id}/bookmark`, {}, {
+                timeout: 10000 // 10 second timeout
+            });
             console.log('Toggle bookmark API response:', response.data);
             return response.data;
         } catch (error) {
             console.error('Toggle bookmark API error:', error);
+            if (error.code === 'ECONNABORTED') {
+                throw new Error('Request timeout. Please try again.');
+            }
             throw error;
         }
     },

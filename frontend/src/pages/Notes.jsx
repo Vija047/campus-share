@@ -121,13 +121,26 @@ const Notes = () => {
     };
 
     const handleBookmark = async (noteId) => {
+        if (!user || !user.id) {
+            toast.error('Please log in to bookmark notes');
+            return;
+        }
+
         try {
             console.log('Attempting to bookmark note:', noteId);
+            console.log('Current user:', user);
             
             if (!noteId) {
                 toast.error('Invalid note ID');
                 return;
             }
+
+            // Show loading state
+            setNotes(notes.map(note =>
+                note._id === noteId
+                    ? { ...note, bookmarkLoading: true }
+                    : note
+            ));
 
             const response = await noteService.toggleBookmark(noteId);
             console.log('Bookmark response:', response);
@@ -137,11 +150,22 @@ const Notes = () => {
             // Update the notes list to reflect bookmark status
             setNotes(notes.map(note =>
                 note._id === noteId
-                    ? { ...note, isBookmarked: response.data.isBookmarked }
+                    ? { 
+                        ...note, 
+                        isBookmarked: response.data.isBookmarked,
+                        bookmarkLoading: false 
+                    }
                     : note
             ));
         } catch (error) {
             console.error('Error bookmarking note:', error);
+            
+            // Remove loading state
+            setNotes(notes.map(note =>
+                note._id === noteId
+                    ? { ...note, bookmarkLoading: false }
+                    : note
+            ));
             
             // More detailed error messaging
             let errorMessage = 'Failed to bookmark note';
@@ -149,6 +173,10 @@ const Notes = () => {
                 errorMessage = error.response.data.message;
             } else if (error.message) {
                 errorMessage = error.message;
+            } else if (error.code === 'ERR_BAD_RESPONSE') {
+                errorMessage = 'Server error. Please try again.';
+            } else if (error.code === 'ERR_NETWORK') {
+                errorMessage = 'Network error. Please check your connection.';
             }
             
             toast.error(errorMessage);

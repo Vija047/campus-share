@@ -43,7 +43,8 @@ const userSchema = new mongoose.Schema({
     },
     bookmarkedNotes: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Note'
+        ref: 'Note',
+        default: []
     }],
     recentlyViewedNotes: [{
         noteId: {

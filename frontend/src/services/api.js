@@ -36,6 +36,15 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
+        console.error('API Error:', error);
+        
+        // Handle network errors
+        if (!error.response) {
+            console.error('Network error or server not responding');
+            toast.error('Network error. Please check your connection and try again.');
+            return Promise.reject(error);
+        }
+
         const message = error.response?.data?.message || 'Something went wrong';
 
         // Handle specific error cases
@@ -50,6 +59,7 @@ api.interceptors.response.use(
         } else if (error.response?.status === 404) {
             toast.error('Resource not found.');
         } else if (error.response?.status >= 500) {
+            console.error('Server error:', error.response.data);
             toast.error('Server error. Please try again later.');
         } else {
             toast.error(message);
