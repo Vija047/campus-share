@@ -1,0 +1,27 @@
+{
+    "name": "student-notes-hub",
+    "version": "1.0.0",
+    "description": "A full-stack web application for students to share notes and collaborate",
+    "main": "index.js",
+    "scripts": {
+        "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+        "backend": "cd backend && npm run dev",
+        "frontend": "cd frontend && npm run dev",
+        "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+        "build": "cd frontend && npm run build",
+        "start": "cd backend && npm start",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "notes",
+        "students",
+        "education",
+        "collaboration",
+        "mern"
+    ],
+    "author": "Student Notes Hub Team",
+    "license": "MIT",
+    "devDependencies": {
+        "concurrently": "^8.2.0"
+    }
+}
