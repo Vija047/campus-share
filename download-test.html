@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .test-result {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Download Functionality Test</h1>
+    <p>This page tests the download functionality that will save files to your laptop.</p>
+
+    <div>
+        <button onclick="testTextDownload()">Test Text File Download</button>
+        <button onclick="testImageDownload()">Test Image Download</button>
+        <button onclick="testPDFDownload()">Test PDF Download</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        // Simple download utility functions (inline for testing)
+        function downloadFile(url, filename) {
+            return new Promise((resolve, reject) => {
+                try {
+                    // Create a temporary link
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = 'none';
+
+                    // Add to DOM, click, and remove
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    resolve(true);
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+            }, 1000);
+        }
+
+        function showResult(message, isSuccess = true) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${isSuccess ? 'success' : 'error'}`;
+            resultDiv.textContent = message;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function getDownloadLocation() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const platform = navigator.platform.toLowerCase();
+
+            if (platform.includes('win') || userAgent.includes('windows')) {
+                return 'Downloads folder (usually C:\\\\Users\\\\YourName\\\\Downloads)';
+            } else if (platform.includes('mac') || userAgent.includes('mac')) {
+                return 'Downloads folder (~/Downloads)';
+            } else if (platform.includes('linux') || userAgent.includes('linux')) {
+                return 'Downloads folder (~/Downloads)';
+            } else {
+                return 'your browser\'s default download location';
+            }
+        }
+
+        async function testTextDownload() {
+            try {
+                // Create a text file
+                const content = `Campus Share Download Test
+=========================
+
+This file was downloaded on: ${new Date().toLocaleString()}
+Browser: ${navigator.userAgent}
+Platform: ${navigator.platform}
+
+If you can see this file on your laptop, the download functionality is working correctly!
+
+File should be saved to: ${getDownloadLocation()}
+`;
+
+                const blob = new Blob([content], { type: 'text/plain' });
+                downloadBlob(blob, 'campus-share-test.txt');
+
+                showResult(`✅ Text file download initiated! Check ${getDownloadLocation()} for "campus-share-test.txt"`);
+            } catch (error) {
+                showResult(`❌ Text file download failed: ${error.message}`, false);
+            }
+        }
+
+        async function testImageDownload() {
+            try {
+                // Create a simple SVG image
+                const svgContent = `<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="200" height="100" fill="#007bff"/>
+                    <text x="100" y="50" font-family="Arial" font-size="16" fill="white" text-anchor="middle" dy="0.3em">
+                        Campus Share Test
+                    </text>
+                </svg>`;
+
+                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                downloadBlob(blob, 'campus-share-test.svg');
+
+                showResult(`✅ Image download initiated! Check ${getDownloadLocation()} for "campus-share-test.svg"`);
+            } catch (error) {
+                showResult(`❌ Image download failed: ${error.message}`, false);
+            }
+        }
+
+        async function testPDFDownload() {
+            try {
+                // This would simulate downloading a PDF from a URL
+                // In a real scenario, this would be a PDF URL from your backend
+                const testUrl = 'data:application/pdf;base64,JVBERi0xLjMNCiXi48/TDQoxIDAgb2JqDQo8PA0KL1R5cGUgL0NhdGFsb2cNCi9QYWdlcyAyIDAgUg0KPj4NCmVuZG9iag0KMiAwIG9iag0KPDwNCi9UeXBlIC9QYWdlcw0KL0NvdW50IDENCi9LaWRzIFszIDAgUl0NCj4+DQplbmRvYmoNCjMgMCBvYmoNCjw8DQovVHlwZSAvUGFnZQ0KL1BhcmVudCAyIDAgUg0KL01lZGlhQm94IFswIDAgNjEyIDc5Ml0NCi9SZXNvdXJjZXMgPDwNCi9Gb250IDw8DQovRjEgNCAwIFINCj4+DQo+Pg0KL0NvbnRlbnRzIDUgMCBSDQo+Pg0KZW5kb2JqDQo0IDAgb2JqDQo8PA0KL1R5cGUgL0ZvbnQNCi9TdWJ0eXBlIC9UeXBlMQ0KL0Jhc2VGb250IC9IZWx2ZXRpY2ENCj4+DQplbmRvYmoNCjUgMCBvYmoNCjw8DQovTGVuZ3RoIDQ0DQo+Pg0Kc3RyZWFtDQpCVA0KL0YxIDEyIFRmDQo3MiA3MjAgVGQNCihDYW1wdXMgU2hhcmUgVGVzdCkgVGoNCkVUDQplbmRzdHJlYW0NCmVuZG9iag0KeHJlZg0KMCA2DQowMDAwMDAwMDAwIDY1NTM1IGYNCjAwMDAwMDAwMTAgMDAwMDAgbg0KMDAwMDAwMDA3OSAwMDAwMCBuDQowMDAwMDAwMTczIDAwMDAwIG4NCjAwMDAwMDAzMDEgMDAwMDAgbg0KMDAwMDAwMDM4MCAwMDAwMCBuDQp0cmFpbGVyDQo8PA0KL1NpemUgNg0KL1Jvb3QgMSAwIFINCj4+DQpzdGFydHhyZWYNCjQ5Mg0KJSVFT0YNCg==';
+
+                await downloadFile(testUrl, 'campus-share-test.pdf');
+
+                showResult(`✅ PDF download initiated! Check ${getDownloadLocation()} for "campus-share-test.pdf"`);
+            } catch (error) {
+                showResult(`❌ PDF download failed: ${error.message}`, false);
+            }
+        }
+
+        // Show initial info
+        window.onload = function () {
+            showResult(`🏠 Files will be saved to: ${getDownloadLocation()}`);
+            showResult(`🌐 Browser: ${navigator.userAgent.split(' ')[0]}`);
+            showResult(`💻 Platform: ${navigator.platform}`);
+        };
+    </script>
+</body>
+
+</html>

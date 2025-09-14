@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { uploadToCloudinary, getFileType } from '../utils/cloudinary.js';
 import { generateShareLink } from '../utils/jwt.js';
+import { saveFileLocally, deleteFileLocally } from '../utils/fileStorage.js';
 import { v4 as uuidv4 } from 'uuid';
 
 // @desc    Upload note
@@ -51,7 +52,7 @@ export const uploadNote = async (req, res) => {
             });
         }
 
-        let fileURL, uploadResult;
+        let fileURL, uploadResult, localFilename;
 
         // Check if Cloudinary is properly configured
         if (!process.env.CLOUDINARY_CLOUD_NAME ||
@@ -60,11 +61,21 @@ export const uploadNote = async (req, res) => {
             process.env.CLOUDINARY_CLOUD_NAME === 'your_cloudinary_cloud_name' ||
             process.env.CLOUDINARY_CLOUD_NAME === 'demo') {
 
-            // For development: create a mock file URL
-            fileURL = `http://localhost:5000/uploads/${Date.now()}-${req.file.originalname}`;
+            // For development: save file locally
+            localFilename = `${Date.now()}-${req.file.originalname}`;
+            const saveResult = await saveFileLocally(req.file.buffer, localFilename);
+            
+            if (!saveResult.success) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to save file locally'
+                });
+            }
+
+            fileURL = `${req.protocol}://${req.get('host')}/uploads/${localFilename}`;
             uploadResult = { secure_url: fileURL };
 
-            console.log('⚠️  Cloudinary not configured, using mock file URL for development');
+            console.log('⚠️  Cloudinary not configured, saved file locally:', localFilename);
         } else {
             try {
                 // Upload file to Cloudinary
@@ -90,6 +101,7 @@ export const uploadNote = async (req, res) => {
             description: description || 'No description provided',
             fileURL: fileURL,
             fileName: req.file.originalname,
+            localFileName: localFilename || null, // Store local filename if file is saved locally
             fileType: getFileType(req.file.mimetype),
             fileSize: req.file.size,
             uploader: req.user.id,

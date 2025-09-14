@@ -18,7 +18,7 @@ import {
 import LoadingSpinner from '../components/common/LoadingSpinner.jsx';
 import Button from '../components/common/Button.jsx';
 import toast from 'react-hot-toast';
-import { downloadFile, downloadFileSimple } from '../utils/downloadUtils.js';
+import { downloadManager } from '../utils/downloadUtils.js';
 
 const Notes = () => {
     const { user } = useAuth();
@@ -94,6 +94,7 @@ const Notes = () => {
     const handleDownload = async (noteId) => {
         // Prevent multiple simultaneous downloads of the same note
         if (downloadingNotes.has(noteId)) {
+            toast.error('Download already in progress for this file');
             return;
         }
 
@@ -104,31 +105,104 @@ const Notes = () => {
             // Show loading toast
             const loadingToast = toast.loading('Preparing download...');
 
+            // Get the note details and download URL
             const response = await noteService.downloadNote(noteId);
+
+            if (!response || !response.data) {
+                throw new Error('Invalid server response');
+            }
+
             const { downloadUrl, fileName } = response.data;
+
+            if (!downloadUrl) {
+                throw new Error('Download URL not available');
+            }
+
+            if (!fileName) {
+                throw new Error('File name not available');
+            }
 
             // Update toast
             toast.dismiss(loadingToast);
-            toast.loading('Downloading file...');
 
-            // Try to download using the blob approach first for better compatibility
+            let downloadToast = toast.loading(`Downloading "${fileName}"...`);
+
+            // Try to download using the download manager for better user experience
             try {
-                await downloadFile(downloadUrl, fileName);
+                const result = await downloadManager(downloadUrl, fileName, {
+                    onProgress: (progress) => {
+                        // Update toast with progress if needed
+                        if (progress % 25 === 0) { // Update every 25%
+                            toast.dismiss(downloadToast);
+                            downloadToast = toast.loading(`Downloading "${fileName}" - ${Math.round(progress)}%`);
+                        }
+                    },
+                    onComplete: (result) => {
+                        toast.dismiss();
+                        if (result.verified) {
+                            toast.success(`"${fileName}" successfully saved to your device`);
+                        } else {
+                            toast.success(`"${fileName}" download started`);
+                        }
+
+                        // Show download location info
+                        setTimeout(() => {
+                            toast(`File saved to: ${result.location}`, {
+                                icon: '�',
+                                duration: 4000
+                            });
+                        }, 1000);
+                    },
+                    onError: (error) => {
+                        console.error('Download manager error:', error);
+                        toast.dismiss();
+
+                        // Provide specific error guidance
+                        if (error.message.includes('404') || error.message.includes('not found')) {
+                            toast.error('File not found. It may have been removed or is temporarily unavailable.');
+                        } else if (error.message.includes('500') || error.message.includes('server error')) {
+                            toast.error('Server error. Please try again in a few moments.');
+                        } else if (error.message.includes('Access denied') || error.message.includes('403')) {
+                            toast.error('Access denied. You may not have permission to download this file.');
+                        } else {
+                            toast.error(`Download failed: ${error.message}`);
+                        }
+                    }
+                });
+
+                console.log('Download completed:', result);
+
+            } catch (downloadError) {
+                console.warn('Download manager failed:', downloadError);
                 toast.dismiss();
-                toast.success(`"${fileName}" downloaded successfully`);
-            } catch (blobError) {
-                console.warn('Blob download failed, trying simple download:', blobError);
-                // Fallback to simple download
-                downloadFileSimple(downloadUrl, fileName);
-                toast.dismiss();
-                toast.success(`Download started for "${fileName}"`);
+
+                // Provide fallback download suggestion
+                toast.error(
+                    'Download failed. You can try right-clicking the download button and selecting "Save link as..."',
+                    { duration: 6000 }
+                );
             }
         } catch (error) {
             console.error('Error downloading note:', error);
             toast.dismiss();
 
             // Show specific error message
-            const errorMessage = error.message || 'Failed to download note. Please try again.';
+            let errorMessage = 'Failed to download note. Please try again.';
+
+            if (error.message.includes('Network')) {
+                errorMessage = 'Network error. Please check your internet connection.';
+            } else if (error.message.includes('timeout')) {
+                errorMessage = 'Download timeout. Please try again.';
+            } else if (error.message.includes('not found')) {
+                errorMessage = 'File not found. It may have been removed.';
+            } else if (error.message.includes('Invalid server response')) {
+                errorMessage = 'Server communication error. Please try again.';
+            } else if (error.message.includes('not available')) {
+                errorMessage = 'Download information not available. The file may be corrupted.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
             toast.error(errorMessage);
         } finally {
             // Remove note from downloading set

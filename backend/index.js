@@ -4,7 +4,12 @@ import helmet from 'helmet';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initializeSocket } from './socket/socketHandler.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/errorHandler.js';
@@ -53,6 +58,14 @@ app.options('*', cors());
 
 // Rate limiting
 app.use(generalLimiter);
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Handle favicon.ico requests
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+});
 
 
 // API routes

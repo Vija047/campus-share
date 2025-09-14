@@ -32,6 +32,10 @@ const noteSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    localFileName: {
+        type: String,
+        default: null // Will be set if file is stored locally instead of Cloudinary
+    },
     fileType: {
         type: String,
         required: true,
