@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Bookmark,
     Search,
@@ -14,14 +14,16 @@ import {
 } from 'lucide-react';
 import { noteService } from '../services/noteService.js';
 import { useAuth } from '../hooks/useAuth.js';
+import { downloadManager } from '../utils/downloadUtils.js';
 import Input from '../components/common/Input';
 import Select from '../components/common/Select';
 import Button from '../components/common/Button';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import DownloadProgress from '../components/common/DownloadProgress';
 import toast from 'react-hot-toast';
 
 const Bookmarks = () => {
-    const { user } = useAuth();
+    useAuth(); // Ensure user is authenticated
     const [bookmarkedNotes, setBookmarkedNotes] = useState([]);
     const [filteredNotes, setFilteredNotes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -30,10 +32,30 @@ const Bookmarks = () => {
     const [pagination, setPagination] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
 
+    // Download state management
+    const [downloadProgress, setDownloadProgress] = useState({});
+    const [activeDownloads, setActiveDownloads] = useState(new Set());
+    const [downloadStatus, setDownloadStatus] = useState({});
+
+    
+
+     const fetchBookmarkedNotes = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const response = await noteService.getBookmarkedNotes(currentPage);
+            setBookmarkedNotes(response.data.notes);
+            setPagination(response.data.pagination);
+            setFilteredNotes(response.data.notes);
+        } catch (error) {
+            console.error('Error fetching bookmarked notes:', error);
+            toast.error('Failed to fetch bookmarked notes');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentPage]);
     useEffect(() => {
         fetchBookmarkedNotes();
-    }, [currentPage]);
-
+    }, [fetchBookmarkedNotes]);
     useEffect(() => {
         const filtered = bookmarkedNotes.filter(note => {
             const matchesSearch = !searchTerm ||
@@ -48,32 +70,93 @@ const Bookmarks = () => {
         setFilteredNotes(filtered);
     }, [searchTerm, selectedSubject, bookmarkedNotes]);
 
-    const fetchBookmarkedNotes = async () => {
-        try {
-            setIsLoading(true);
-            const response = await noteService.getBookmarkedNotes(currentPage);
-            setBookmarkedNotes(response.data.notes);
-            setPagination(response.data.pagination);
-            setFilteredNotes(response.data.notes);
-        } catch (error) {
-            console.error('Error fetching bookmarked notes:', error);
-            toast.error('Failed to fetch bookmarked notes');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+   
 
     const handleDownload = async (noteId) => {
+        // Prevent multiple downloads of the same file
+        if (activeDownloads.has(noteId)) {
+            toast.error('Download already in progress');
+            return;
+        }
+
         try {
+            // Mark download as active
+            setActiveDownloads(prev => new Set([...prev, noteId]));
+            setDownloadStatus(prev => ({ ...prev, [noteId]: 'downloading' }));
+            setDownloadProgress(prev => ({ ...prev, [noteId]: 0 }));
+
+            // Get download URL from API
             const response = await noteService.downloadNote(noteId);
-            const link = document.createElement('a');
-            link.href = response.data.downloadUrl;
-            link.download = response.data.fileName;
-            link.click();
-            toast.success('Note downloaded successfully');
+            const { downloadUrl, fileName } = response.data;
+
+            // Find the note to get additional info
+            const note = bookmarkedNotes.find(n => n._id === noteId);
+            const displayFileName = fileName || note?.fileName || 'download';
+
+            // Use enhanced download manager with progress tracking
+            await downloadManager(downloadUrl, displayFileName, {
+                onProgress: (progress) => {
+                    setDownloadProgress(prev => ({ ...prev, [noteId]: progress }));
+                },
+                onStart: () => {
+                    toast.success(`Starting download: ${displayFileName}`);
+                },
+                onComplete: () => {
+                    setDownloadStatus(prev => ({ ...prev, [noteId]: 'completed' }));
+                    setDownloadProgress(prev => ({ ...prev, [noteId]: 100 }));
+                    toast.success(`Download completed: ${displayFileName}`);
+
+                    // Clear status after a delay
+                    setTimeout(() => {
+                        setDownloadStatus(prev => {
+                            const newStatus = { ...prev };
+                            delete newStatus[noteId];
+                            return newStatus;
+                        });
+                        setDownloadProgress(prev => {
+                            const newProgress = { ...prev };
+                            delete newProgress[noteId];
+                            return newProgress;
+                        });
+                    }, 3000);
+                },
+                onError: (error) => {
+                    setDownloadStatus(prev => ({ ...prev, [noteId]: 'error' }));
+                    console.error('Download error:', error);
+                    toast.error(`Download failed: ${error.message}`);
+
+                    // Clear error status after delay
+                    setTimeout(() => {
+                        setDownloadStatus(prev => {
+                            const newStatus = { ...prev };
+                            delete newStatus[noteId];
+                            return newStatus;
+                        });
+                    }, 5000);
+                },
+                showInstructions: false
+            });
+
         } catch (error) {
-            console.error('Error downloading note:', error);
-            toast.error('Failed to download note');
+            setDownloadStatus(prev => ({ ...prev, [noteId]: 'error' }));
+            console.error('Error initiating download:', error);
+            toast.error('Failed to start download');
+
+            // Clear error status after delay
+            setTimeout(() => {
+                setDownloadStatus(prev => {
+                    const newStatus = { ...prev };
+                    delete newStatus[noteId];
+                    return newStatus;
+                });
+            }, 5000);
+        } finally {
+            // Remove from active downloads
+            setActiveDownloads(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(noteId);
+                return newSet;
+            });
         }
     };
 
@@ -257,6 +340,18 @@ const Bookmarks = () => {
 
                                 {/* Card Footer */}
                                 <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                                    {/* Download Progress */}
+                                    {downloadStatus[note._id] && (
+                                        <div className="mb-3">
+                                            <DownloadProgress
+                                                fileName={note.fileName}
+                                                progress={downloadProgress[note._id] || 0}
+                                                status={downloadStatus[note._id]}
+                                                error={downloadStatus[note._id] === 'error' ? 'Download failed' : null}
+                                            />
+                                        </div>
+                                    )}
+
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs text-gray-500">
                                             Bookmarked recently
@@ -267,8 +362,10 @@ const Bookmarks = () => {
                                                 variant="primary"
                                                 icon={Download}
                                                 onClick={() => handleDownload(note._id)}
+                                                disabled={activeDownloads.has(note._id)}
+                                                loading={activeDownloads.has(note._id)}
                                             >
-                                                Download
+                                                {activeDownloads.has(note._id) ? 'Downloading...' : 'Download'}
                                             </Button>
                                         </div>
                                     </div>

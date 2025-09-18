@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Camera, Save, User, Mail, Building, Calendar, Users, RefreshCw, Bookmark, BookOpen, Download, Heart, Eye } from 'lucide-react';
+import { Camera, Save, User, Mail, Building, Calendar, Users, RefreshCw, Bookmark, BookOpen, Download, Heart, Eye, Edit3, MapPin, Star, Award, TrendingUp, Activity } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
 import { noteService } from '../services/noteService';
@@ -118,14 +118,6 @@ const Profile = () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    };
-
     const departmentOptions = [
         { value: '', label: 'Select Department' },
         { value: 'Computer Science', label: 'Computer Science' },
@@ -163,268 +155,493 @@ const Profile = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-10">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-                {/* Profile Header */}
-                <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-8">
-                    <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10">
-                        {/* Profile Picture */}
-                        <div className="relative">
-                            <div className="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shadow">
-                                {formData.profilePicture ? (
-                                    <img
-                                        src={formData.profilePicture}
-                                        alt="Profile"
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <User className="w-16 h-16 text-gray-400" />
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-30 pointer-events-none"
+                style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f3f4f6' fill-opacity='0.3'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                    backgroundSize: '60px 60px'
+                }}>
+            </div>
+
+            <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+                {/* Profile Header with Gradient Card */}
+                <div className="relative overflow-hidden bg-white rounded-3xl shadow-xl border border-gray-100">
+                    {/* Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 opacity-5"></div>
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-blue-400/10 to-purple-500/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-pink-400/10 to-blue-500/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+
+                    <div className="relative p-8 lg:p-12">
+                        <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8">
+                            {/* Enhanced Profile Picture */}
+                            <div className="relative group">
+                                <div className="w-36 h-36 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 p-1 shadow-2xl">
+                                    <div className="w-full h-full rounded-full bg-white p-1">
+                                        <div className="w-full h-full rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                                            {formData.profilePicture ? (
+                                                <img
+                                                    src={formData.profilePicture}
+                                                    alt="Profile"
+                                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                />
+                                            ) : (
+                                                <User className="w-16 h-16 text-gray-400" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                {isEditing && (
+                                    <label className="absolute bottom-2 right-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full p-3 cursor-pointer hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                                        <Camera className="w-5 h-5 text-white" />
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                                {/* Online Status Indicator */}
+                                <div className="absolute bottom-4 right-4 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-lg"></div>
+                            </div>
+
+                            {/* Enhanced Profile Info */}
+                            <div className="flex-1 text-center lg:text-left space-y-4">
+                                <div>
+                                    <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent leading-tight">
+                                        {user.name}
+                                    </h1>
+                                    <p className="text-xl text-gray-600 mt-2 flex items-center justify-center lg:justify-start">
+                                        <Mail className="w-5 h-5 mr-2 text-blue-500" />
+                                        {user.email}
+                                    </p>
+                                </div>
+
+                                {/* Enhanced Info Tags */}
+                                <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+                                    {user.department && (
+                                        <div className="flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-full text-blue-700 hover:bg-blue-100 transition-colors">
+                                            <Building className="w-4 h-4 mr-2" />
+                                            <span className="font-medium">{user.department}</span>
+                                        </div>
+                                    )}
+                                    {user.semester && (
+                                        <div className="flex items-center px-4 py-2 bg-purple-50 border border-purple-200 rounded-full text-purple-700 hover:bg-purple-100 transition-colors">
+                                            <Calendar className="w-4 h-4 mr-2" />
+                                            <span className="font-medium">Semester {user.semester}</span>
+                                        </div>
+                                    )}
+                                    {user.gender && (
+                                        <div className="flex items-center px-4 py-2 bg-pink-50 border border-pink-200 rounded-full text-pink-700 hover:bg-pink-100 transition-colors">
+                                            <Users className="w-4 h-4 mr-2" />
+                                            <span className="font-medium">
+                                                {user.gender === 'male' ? 'He/Him' : user.gender === 'female' ? 'She/Her' : 'They/Them'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Bio Preview */}
+                                {user.bio && (
+                                    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
+                                        <p className="text-gray-700 italic leading-relaxed">"{user.bio}"</p>
+                                    </div>
                                 )}
                             </div>
-                            {isEditing && (
-                                <label className="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2 cursor-pointer hover:bg-blue-700 transition">
-                                    <Camera className="w-4 h-4 text-white" />
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageUpload}
-                                        className="hidden"
-                                    />
-                                </label>
-                            )}
-                        </div>
 
-                        {/* Profile Info */}
-                        <div className="flex-1 text-center md:text-left">
-                            <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
-                            <p className="text-gray-600 mt-1">{user.email}</p>
-                            <div className="flex flex-wrap gap-4 mt-4 justify-center md:justify-start">
-                                <span className="flex items-center text-sm text-gray-500">
-                                    <Building className="w-4 h-4 mr-1" />
-                                    {user.department || 'Not specified'}
-                                </span>
-                                <span className="flex items-center text-sm text-gray-500">
-                                    <Calendar className="w-4 h-4 mr-1" />
-                                    Semester {user.semester || 'Not specified'}
-                                </span>
-                                <span className="flex items-center text-sm text-gray-500">
-                                    <Users className="w-4 h-4 mr-1" />
-                                    {user.gender === 'male'
-                                        ? 'He/Him'
-                                        : user.gender === 'female'
-                                            ? 'She/Her'
-                                            : 'They/Them'}
-                                </span>
+                            {/* Enhanced Action Buttons */}
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <Button
+                                    onClick={refreshProfile}
+                                    variant="outline"
+                                    loading={isRefreshing}
+                                    className="px-6 py-3 border-gray-300 hover:border-blue-400 hover:text-blue-600 transition-all duration-300"
+                                    icon={RefreshCw}
+                                >
+                                    Refresh
+                                </Button>
+                                <Button
+                                    onClick={() => setIsEditing(!isEditing)}
+                                    variant={isEditing ? 'secondary' : 'primary'}
+                                    className={`px-8 py-3 ${!isEditing ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl' : ''} transition-all duration-300 transform hover:scale-105`}
+                                    icon={isEditing ? RefreshCw : Edit3}
+                                >
+                                    {isEditing ? 'Cancel' : 'Edit Profile'}
+                                </Button>
                             </div>
-                        </div>
-
-                        {/* Edit Button */}
-                        <div className="flex gap-2">
-                            <Button
-                                onClick={refreshProfile}
-                                variant="secondary"
-                                loading={isRefreshing}
-                                className="px-4"
-                                icon={RefreshCw}
-                            >
-                                Refresh
-                            </Button>
-                            <Button
-                                onClick={() => setIsEditing(!isEditing)}
-                                variant={isEditing ? 'secondary' : 'primary'}
-                                className="px-6"
-                            >
-                                {isEditing ? 'Cancel' : 'Edit Profile'}
-                            </Button>
                         </div>
                     </div>
                 </div>
 
-                {/* Profile Form or Details */}
+                {/* Enhanced Profile Form */}
                 {isEditing ? (
-                    <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-8">
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Edit Profile</h2>
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Input
-                                    type="text"
-                                    name="name"
-                                    label="Full Name *"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                    required
-                                    icon={User}
-                                />
-                                <Input
-                                    type="email"
-                                    name="email"
-                                    label="Email Address *"
-                                    value={formData.email}
-                                    onChange={handleInputChange}
-                                    required
-                                    icon={Mail}
-                                />
-                                <Select
-                                    name="department"
-                                    label="Department *"
-                                    value={formData.department}
-                                    onChange={handleInputChange}
-                                    options={departmentOptions}
-                                    required
-                                />
-                                <Select
-                                    name="semester"
-                                    label="Current Semester *"
-                                    value={formData.semester}
-                                    onChange={handleInputChange}
-                                    options={semesterOptions}
-                                    required
-                                />
-                                <Select
-                                    name="gender"
-                                    label="Gender Pronouns *"
-                                    value={formData.gender}
-                                    onChange={handleInputChange}
-                                    options={genderOptions}
-                                    required
-                                    className="md:col-span-2"
-                                />
+                    <div className="relative overflow-hidden bg-white rounded-3xl shadow-xl border border-gray-100">
+                        {/* Gradient Background for Form */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 opacity-50"></div>
+
+                        <div className="relative p-8 lg:p-12">
+                            <div className="flex items-center mb-8">
+                                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                                    <Edit3 className="w-6 h-6 text-white" />
+                                </div>
+                                <div className="ml-4">
+                                    <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
+                                        Edit Profile
+                                    </h2>
+                                    <p className="text-gray-600 mt-1">Update your information and preferences</p>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                                <textarea
-                                    name="bio"
-                                    value={formData.bio}
-                                    onChange={handleInputChange}
-                                    rows="4"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                    placeholder="Tell us about yourself..."
-                                />
-                            </div>
-                            <div className="flex justify-end">
-                                <Button type="submit" loading={isLoading} className="px-8" icon={Save}>
-                                    Save Changes
-                                </Button>
-                            </div>
-                        </form>
+
+                            <form onSubmit={handleSubmit} className="space-y-8">
+                                {/* Personal Information Section */}
+                                <div className="bg-white/50 rounded-2xl p-6 border border-gray-200/50 backdrop-blur-sm">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                        <User className="w-5 h-5 mr-2 text-blue-600" />
+                                        Personal Information
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Input
+                                            type="text"
+                                            name="name"
+                                            label="Full Name *"
+                                            value={formData.name}
+                                            onChange={handleInputChange}
+                                            required
+                                            icon={User}
+                                            className="transition-all duration-300 focus:scale-105"
+                                        />
+                                        <Input
+                                            type="email"
+                                            name="email"
+                                            label="Email Address *"
+                                            value={formData.email}
+                                            onChange={handleInputChange}
+                                            required
+                                            icon={Mail}
+                                            className="transition-all duration-300 focus:scale-105"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Academic Information Section */}
+                                <div className="bg-white/50 rounded-2xl p-6 border border-gray-200/50 backdrop-blur-sm">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                        <Building className="w-5 h-5 mr-2 text-purple-600" />
+                                        Academic Details
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Select
+                                            name="department"
+                                            label="Department *"
+                                            value={formData.department}
+                                            onChange={handleInputChange}
+                                            options={departmentOptions}
+                                            required
+                                            className="transition-all duration-300 focus:scale-105"
+                                        />
+                                        <Select
+                                            name="semester"
+                                            label="Current Semester *"
+                                            value={formData.semester}
+                                            onChange={handleInputChange}
+                                            options={semesterOptions}
+                                            required
+                                            className="transition-all duration-300 focus:scale-105"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Personal Preferences Section */}
+                                <div className="bg-white/50 rounded-2xl p-6 border border-gray-200/50 backdrop-blur-sm">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                        <Users className="w-5 h-5 mr-2 text-pink-600" />
+                                        Personal Preferences
+                                    </h3>
+                                    <div className="space-y-6">
+                                        <Select
+                                            name="gender"
+                                            label="Gender Pronouns *"
+                                            value={formData.gender}
+                                            onChange={handleInputChange}
+                                            options={genderOptions}
+                                            required
+                                            className="transition-all duration-300 focus:scale-105"
+                                        />
+
+                                        <div>
+                                            <label className="flex items-center text-sm font-medium text-gray-700 mb-3">
+                                                <Heart className="w-4 h-4 mr-2 text-red-500" />
+                                                Bio
+                                            </label>
+                                            <textarea
+                                                name="bio"
+                                                value={formData.bio}
+                                                onChange={handleInputChange}
+                                                rows="4"
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 resize-none bg-white/80 backdrop-blur-sm hover:bg-white focus:bg-white"
+                                                placeholder="Tell us about yourself, your interests, and what makes you unique..."
+                                            />
+                                            <p className="text-xs text-gray-500 mt-2">Share a bit about yourself to help others connect with you</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setIsEditing(false)}
+                                        className="px-8 py-3 border-gray-300 hover:border-gray-400 transition-all duration-300"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        loading={isLoading}
+                                        className="px-12 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                                        icon={Save}
+                                    >
+                                        Save Changes
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Personal Information */}
-                        <div className="lg:col-span-2">
-                            <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-8">
-                                <h2 className="text-xl font-semibold text-gray-900 mb-6">Personal Information</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <InfoItem label="Full Name" value={user.name} />
-                                    <InfoItem label="Email" value={user.email} />
-                                    <InfoItem label="Department" value={user.department || 'Not specified'} />
-                                    <InfoItem label="Semester" value={user.semester ? `${user.semester}` : 'Not specified'} />
-                                    <InfoItem
-                                        label="Gender"
-                                        value={
-                                            user.gender === 'male'
-                                                ? 'Male (He/Him)'
-                                                : user.gender === 'female'
-                                                    ? 'Female (She/Her)'
-                                                    : user.gender === 'other'
-                                                        ? 'Other (They/Them)'
-                                                        : 'Not specified'
-                                        }
-                                    />
-                                </div>
-                                {user.bio && (
-                                    <div className="mt-6">
-                                        <h3 className="text-sm font-medium text-gray-500 mb-1">Bio</h3>
-                                        <p className="text-gray-900">{user.bio}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                        {/* Personal Information - Enhanced */}
+                        <div className="xl:col-span-2">
+                            <div className="relative overflow-hidden bg-white rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300">
+                                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 opacity-50"></div>
 
-                        {/* Statistics */}
-                        <div>
-                            <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 mb-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Activity Stats</h3>
-                                <StatItem label="Notes Uploaded" value={user.notesUploaded || 0} color="text-blue-600" />
-                                <StatItem label="Likes Received" value={user.likesReceived || 0} color="text-green-600" />
-                                <StatItem
-                                    label="Member Since"
-                                    value={user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
-                                    color="text-gray-900"
-                                />
-                            </div>
-
-
-                        </div>
-
-                        {/* Saved Notes Section */}
-                        <div className="bg-white rounded-2xl shadow-md border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                                    <Bookmark className="w-5 h-5 mr-2 text-blue-600" />
-                                    Saved Notes
-                                </h3>
-                                <span className="text-sm text-gray-500">
-                                    {savedNotes.length} saved
-                                </span>
-                            </div>
-
-                            {savedNotesLoading ? (
-                                <div className="flex justify-center py-8">
-                                    <LoadingSpinner />
-                                </div>
-                            ) : savedNotes.length === 0 ? (
-                                <div className="text-center py-8">
-                                    <BookOpen className="mx-auto w-12 h-12 text-gray-400 mb-2" />
-                                    <p className="text-gray-500">No saved notes yet</p>
-                                    <p className="text-sm text-gray-400">Bookmark notes to see them here</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {savedNotes.slice(0, 5).map((note) => (
-                                        <div key={note._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="text-sm font-medium text-gray-900 truncate">
-                                                    {note.title}
-                                                </h4>
-                                                <div className="flex items-center text-xs text-gray-500 mt-1 space-x-3">
-                                                    <span className="flex items-center">
-                                                        <BookOpen className="w-3 h-3 mr-1" />
-                                                        {note.subject}
-                                                    </span>
-                                                    <span className="flex items-center">
-                                                        <Calendar className="w-3 h-3 mr-1" />
-                                                        Sem {note.semester}
-                                                    </span>
-                                                    <span>{formatFileSize(note.fileSize)}</span>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center space-x-2 ml-3">
-                                                <div className="flex items-center text-xs text-gray-400 space-x-2">
-                                                    <span className="flex items-center">
-                                                        <Heart className="w-3 h-3 mr-1" />
-                                                        {note.likes?.length || 0}
-                                                    </span>
-                                                    <span className="flex items-center">
-                                                        <Download className="w-3 h-3 mr-1" />
-                                                        {note.downloads || 0}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                <div className="relative p-8">
+                                    <div className="flex items-center mb-6">
+                                        <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                                            <User className="w-6 h-6 text-white" />
                                         </div>
-                                    ))}
-                                    {savedNotes.length > 5 && (
-                                        <div className="text-center mt-3">
-                                            <button
-                                                onClick={() => window.location.href = '/bookmarks'}
-                                                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                                            >
-                                                View all {savedNotes.length} saved notes
-                                            </button>
+                                        <div className="ml-4">
+                                            <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
+                                                Personal Information
+                                            </h2>
+                                            <p className="text-gray-600">Your profile details</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <EnhancedInfoItem
+                                            icon={User}
+                                            label="Full Name"
+                                            value={user.name}
+                                            color="text-blue-600"
+                                        />
+                                        <EnhancedInfoItem
+                                            icon={Mail}
+                                            label="Email"
+                                            value={user.email}
+                                            color="text-green-600"
+                                        />
+                                        <EnhancedInfoItem
+                                            icon={Building}
+                                            label="Department"
+                                            value={user.department || 'Not specified'}
+                                            color="text-purple-600"
+                                        />
+                                        <EnhancedInfoItem
+                                            icon={Calendar}
+                                            label="Semester"
+                                            value={user.semester ? `${user.semester}` : 'Not specified'}
+                                            color="text-pink-600"
+                                        />
+                                        <EnhancedInfoItem
+                                            icon={Users}
+                                            label="Gender"
+                                            value={
+                                                user.gender === 'male'
+                                                    ? 'Male (He/Him)'
+                                                    : user.gender === 'female'
+                                                        ? 'Female (She/Her)'
+                                                        : user.gender === 'other'
+                                                            ? 'Other (They/Them)'
+                                                            : 'Not specified'
+                                            }
+                                            color="text-indigo-600"
+                                        />
+                                        <EnhancedInfoItem
+                                            icon={Calendar}
+                                            label="Member Since"
+                                            value={user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'N/A'}
+                                            color="text-gray-600"
+                                        />
+                                    </div>
+
+                                    {user.bio && (
+                                        <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border border-blue-200/50">
+                                            <h3 className="flex items-center text-lg font-semibold text-gray-900 mb-3">
+                                                <Heart className="w-5 h-5 mr-2 text-red-500" />
+                                                About Me
+                                            </h3>
+                                            <p className="text-gray-700 leading-relaxed italic">"{user.bio}"</p>
                                         </div>
                                     )}
                                 </div>
-                            )}
+                            </div>
+                        </div>
+
+                        {/* Enhanced Statistics Sidebar */}
+                        <div className="xl:col-span-2 space-y-6">
+                            {/* Activity Stats Card */}
+                            <div className="relative overflow-hidden bg-white rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300">
+                                <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-white to-blue-50 opacity-50"></div>
+
+                                <div className="relative p-8">
+                                    <div className="flex items-center mb-6">
+                                        <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-green-600 to-blue-600 rounded-full flex items-center justify-center">
+                                            <Activity className="w-6 h-6 text-white" />
+                                        </div>
+                                        <div className="ml-4">
+                                            <h3 className="text-2xl font-bold bg-gradient-to-r from-green-700 to-blue-700 bg-clip-text text-transparent">
+                                                Activity Stats
+                                            </h3>
+                                            <p className="text-gray-600">Your platform engagement</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <EnhancedStatItem
+                                            icon={BookOpen}
+                                            label="Notes Uploaded"
+                                            value={user.notesUploaded || 0}
+                                            color="from-blue-600 to-purple-600"
+                                            bgColor="from-blue-50 to-purple-50"
+                                            description="Total notes shared"
+                                        />
+                                        <EnhancedStatItem
+                                            icon={Heart}
+                                            label="Likes Received"
+                                            value={user.likesReceived || 0}
+                                            color="from-pink-600 to-red-600"
+                                            bgColor="from-pink-50 to-red-50"
+                                            description="Community appreciation"
+                                        />
+                                        <EnhancedStatItem
+                                            icon={Download}
+                                            label="Downloads"
+                                            value={user.totalDownloads || 0}
+                                            color="from-green-600 to-teal-600"
+                                            bgColor="from-green-50 to-teal-50"
+                                            description="Total downloads"
+                                        />
+                                        <EnhancedStatItem
+                                            icon={Star}
+                                            label="Reputation Score"
+                                            value={Math.floor((user.likesReceived || 0) * 2 + (user.notesUploaded || 0) * 5)}
+                                            color="from-yellow-600 to-orange-600"
+                                            bgColor="from-yellow-50 to-orange-50"
+                                            description="Overall contribution"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+
+                        </div>
+                        {/* Enhanced Saved Notes Section */}
+                        <div className="relative overflow-hidden bg-white rounded-3xl shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300">
+                            <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-white to-orange-50 opacity-50"></div>
+
+                            <div className="relative p-8">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center">
+                                        <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-amber-600 to-orange-600 rounded-full flex items-center justify-center">
+                                            <Bookmark className="w-6 h-6 text-white" />
+                                        </div>
+                                        <div className="ml-4">
+                                            <h3 className="text-2xl font-bold bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent">
+                                                Saved Notes
+                                            </h3>
+                                            <p className="text-gray-600">Your bookmarked content</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center px-3 py-1 bg-gradient-to-r from-amber-100 to-orange-100 rounded-full">
+                                        <span className="text-sm font-semibold text-amber-700">
+                                            {savedNotes.length} saved
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {savedNotesLoading ? (
+                                    <div className="flex justify-center py-12">
+                                        <LoadingSpinner />
+                                    </div>
+                                ) : savedNotes.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
+                                            <BookOpen className="w-10 h-10 text-gray-400" />
+                                        </div>
+                                        <h4 className="text-lg font-semibold text-gray-600 mb-2">No saved notes yet</h4>
+                                        <p className="text-gray-500 mb-4">Bookmark notes to see them here</p>
+                                        <div className="inline-flex px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full">
+                                            <span className="text-sm text-blue-700">Start exploring notes to bookmark your favorites!</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {savedNotes.slice(0, 5).map((note) => (
+                                            <div key={note._id} className="group">
+                                                <div className="flex items-center justify-between p-4 bg-white/60 rounded-2xl border border-gray-200/50 hover:bg-white hover:shadow-lg transition-all duration-300 backdrop-blur-sm">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="flex-1">
+                                                                <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                                                                    {note.title}
+                                                                </h4>
+                                                                <div className="flex items-center text-xs text-gray-500 mt-2 space-x-4">
+                                                                    <span className="flex items-center px-2 py-1 bg-blue-50 rounded-full">
+                                                                        <BookOpen className="w-3 h-3 mr-1" />
+                                                                        {note.subject}
+                                                                    </span>
+                                                                    <span className="flex items-center px-2 py-1 bg-purple-50 rounded-full">
+                                                                        <Calendar className="w-3 h-3 mr-1" />
+                                                                        Sem {note.semester}
+                                                                    </span>
+                                                                    <span className="px-2 py-1 bg-gray-50 rounded-full">
+                                                                        {formatFileSize(note.fileSize)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center space-x-3 ml-4">
+                                                                <div className="flex items-center text-xs text-gray-400 space-x-3">
+                                                                    <span className="flex items-center px-2 py-1 bg-red-50 rounded-full">
+                                                                        <Heart className="w-3 h-3 mr-1 text-red-500" />
+                                                                        <span className="text-red-600 font-medium">{note.likes?.length || 0}</span>
+                                                                    </span>
+                                                                    <span className="flex items-center px-2 py-1 bg-green-50 rounded-full">
+                                                                        <Download className="w-3 h-3 mr-1 text-green-500" />
+                                                                        <span className="text-green-600 font-medium">{note.downloads || 0}</span>
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {savedNotes.length > 5 && (
+                                            <div className="text-center mt-6 pt-4 border-t border-gray-200">
+                                                <button
+                                                    onClick={() => window.location.href = '/bookmarks'}
+                                                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-full hover:from-amber-700 hover:to-orange-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                                                >
+                                                    <Eye className="w-4 h-4 mr-2" />
+                                                    View all {savedNotes.length} saved notes
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -433,7 +650,46 @@ const Profile = () => {
     );
 };
 
-// Small reusable components
+// Enhanced reusable components
+const EnhancedInfoItem = ({ icon, label, value, color }) => {
+    const IconComponent = icon;
+    return (
+        <div className="group p-4 bg-white/50 rounded-2xl border border-gray-200/50 hover:bg-white hover:shadow-md transition-all duration-300 backdrop-blur-sm">
+            <div className="flex items-center space-x-3">
+                <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                    <IconComponent className={`w-5 h-5 ${color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</h3>
+                    <p className="text-sm font-semibold text-gray-900 truncate mt-1">{value}</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const EnhancedStatItem = ({ icon, label, value, color, bgColor, description }) => {
+    const IconComponent = icon;
+    return (
+        <div className={`p-6 bg-gradient-to-r ${bgColor} rounded-2xl border border-gray-200/50 hover:shadow-lg transition-all duration-300 group`}>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                    <div className={`flex-shrink-0 w-12 h-12 bg-gradient-to-r ${color} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                        <IconComponent className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-medium text-gray-600">{label}</h4>
+                        <p className="text-xs text-gray-500 mt-1">{description}</p>
+                    </div>
+                </div>
+                <div className={`text-2xl font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent`}>
+                    {value}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const InfoItem = ({ label, value }) => (
     <div>
         <h3 className="text-sm font-medium text-gray-500">{label}</h3>

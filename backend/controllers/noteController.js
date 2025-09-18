@@ -1,6 +1,7 @@
 import Note from '../models/Note.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
+import { createNotification } from './notificationController.js';
 import { uploadToCloudinary, getFileType } from '../utils/cloudinary.js';
 import { generateShareLink } from '../utils/jwt.js';
 import { saveFileLocally, deleteFileLocally } from '../utils/fileStorage.js';
@@ -129,19 +130,22 @@ export const uploadNote = async (req, res) => {
             isActive: true
         });
 
-        const notifications = sameYearUsers.map(user => ({
-            recipient: user._id,
-            sender: req.user.id,
-            type: 'new_note',
-            title: 'New Note Uploaded',
-            message: `${req.user.name} uploaded a new note: ${title} for ${subject}`,
-            data: {
-                noteId: note._id
-            }
-        }));
+        // Create notifications using the notification service
+        const notificationPromises = sameYearUsers.map(user =>
+            createNotification({
+                recipient: user._id,
+                sender: req.user.id,
+                type: 'new_note',
+                title: 'New Note Uploaded',
+                message: `${req.user.name} uploaded a new note: ${title} for ${subject}`,
+                data: {
+                    noteId: note._id
+                }
+            })
+        );
 
-        if (notifications.length > 0) {
-            await Notification.insertMany(notifications);
+        if (notificationPromises.length > 0) {
+            await Promise.allSettled(notificationPromises);
         }
 
         const populatedNote = await Note.findById(note._id).populate('uploader', 'name profilePicture');

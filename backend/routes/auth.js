@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, updateProfile } from '../controllers/authController.js';
+import { register, login, getMe, updateProfile, forgotPassword, verifyOTP, resetPassword } from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
 
@@ -50,9 +50,44 @@ const profileValidation = [
         .withMessage('Semester must be between 1 and 8')
 ];
 
+const forgotPasswordValidation = [
+    body('email')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please enter a valid email')
+];
+
+const verifyOTPValidation = [
+    body('email')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please enter a valid email'),
+    body('otp')
+        .isLength({ min: 6, max: 6 })
+        .isNumeric()
+        .withMessage('OTP must be a 6-digit number')
+];
+
+const resetPasswordValidation = [
+    body('email')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please enter a valid email'),
+    body('otp')
+        .isLength({ min: 6, max: 6 })
+        .isNumeric()
+        .withMessage('OTP must be a 6-digit number'),
+    body('newPassword')
+        .isLength({ min: 6 })
+        .withMessage('New password must be at least 6 characters long')
+];
+
 // Routes
 router.post('/register', authLimiter, registerValidation, register);
 router.post('/login', authLimiter, loginValidation, login);
+router.post('/forgot-password', authLimiter, forgotPasswordValidation, forgotPassword);
+router.post('/verify-otp', authLimiter, verifyOTPValidation, verifyOTP);
+router.post('/reset-password', authLimiter, resetPasswordValidation, resetPassword);
 router.get('/me', authenticate, getMe);
 router.put('/profile', authenticate, profileValidation, updateProfile);
 

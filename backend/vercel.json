@@ -1,0 +1,121 @@
+{
+    "version": 2,
+    "name": "campus-share-backend",
+    "builds": [
+        {
+            "src": "index.js",
+            "use": "@vercel/node"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/uploads/(.*)",
+            "dest": "/index.js"
+        },
+        {
+            "src": "/api/(.*)",
+            "dest": "/index.js"
+        },
+        {
+            "src": "/auth/(.*)",
+            "dest": "/index.js"
+        },
+        {
+            "src": "/notes/(.*)",
+            "dest": "/index.js"
+        },
+        {
+            "src": "/posts/(.*)",
+            "dest": "/index.js"
+        },
+        {
+            "src": "/chat/(.*)",
+            "dest": "/index.js"
+        },
+        {
+            "src": "/stats/(.*)",
+            "dest": "/index.js"
+        },
+        {
+            "src": "/socket.io/(.*)",
+            "dest": "/index.js"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/index.js"
+        }
+    ],
+    "env": {
+        "NODE_ENV": "production"
+    },
+    "functions": {
+        "index.js": {
+            "maxDuration": 30
+        }
+    },
+    "headers": [
+        {
+            "source": "/uploads/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "GET, POST, PUT, DELETE, OPTIONS"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "Content-Type, Authorization, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version, Range"
+                },
+                {
+                    "key": "Access-Control-Expose-Headers",
+                    "value": "Content-Length, Content-Range, Accept-Ranges"
+                },
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=86400"
+                }
+            ]
+        },
+        {
+            "source": "/api/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "GET, POST, PUT, DELETE, OPTIONS"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "Content-Type, Authorization, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version"
+                },
+                {
+                    "key": "Access-Control-Allow-Credentials",
+                    "value": "true"
+                }
+            ]
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/socket.io/(.*)",
+            "destination": "/index.js"
+        }
+    ],
+    "installCommand": "npm install",
+    "buildCommand": "echo 'No build step required'",
+    "devCommand": "npm run dev",
+    "outputDirectory": ".",
+    "framework": null,
+    "regions": [
+        "iad1"
+    ],
+    "github": {
+        "autoAlias": false
+    }
+}

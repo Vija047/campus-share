@@ -21,6 +21,7 @@ import noteRoutes from './routes/notes.js';
 import postRoutes from './routes/posts.js';
 import chatRoutes from './routes/chat.js';
 import statsRoutes from './routes/stats.js';
+import notificationRoutes from './routes/notifications.js';
 
 // Load environment variables
 dotenv.config();
@@ -58,7 +59,10 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Handle preflight requests
 app.options('*', cors());
 
-// Rate limiting
+// API routes for notifications (before rate limiting to allow frequent polling)
+app.use('/api/notifications', notificationRoutes);
+
+// Rate limiting for other routes
 app.use(generalLimiter);
 
 // Custom file serving route with proper error handling and MIME types

@@ -1,3 +1,8 @@
+// Async error handler wrapper
+export const catchAsyncError = (fn) => (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+};
+
 export const errorHandler = (err, req, res, next) => {
     let error = { ...err };
     error.message = err.message;

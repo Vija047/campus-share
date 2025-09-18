@@ -3,13 +3,17 @@ import rateLimit from 'express-rate-limit';
 // General rate limiter
 export const generalLimiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-    max: parseInt(process.env.RATE_LIMIT_MAX) || 100, // limit each IP to 100 requests per windowMs
+    max: parseInt(process.env.RATE_LIMIT_MAX) || 500, // limit each IP to 500 requests per windowMs
     message: {
         success: false,
         message: 'Too many requests from this IP, please try again later.'
     },
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Use user ID if authenticated, fallback to IP
+        return req.user?.id || req.ip;
+    }
 });
 
 // Strict rate limiter for authentication endpoints

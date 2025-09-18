@@ -75,3 +75,25 @@ export const sendNotificationEmail = async (user, notification) => {
         html,
     });
 };
+
+export const sendOTPEmail = async (user, otp) => {
+    const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #3B82F6; text-align: center;">Password Reset Request</h2>
+      <p>Hi ${user.name},</p>
+      <p>You have requested to reset your password for Student Notes Hub. Please use the following OTP to proceed:</p>
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <h1 style="color: #3B82F6; font-size: 32px; margin: 0; letter-spacing: 4px;">${otp}</h1>
+      </div>
+      <p style="color: #dc3545; font-weight: bold;">This OTP will expire in 10 minutes.</p>
+      <p>If you didn't request this password reset, please ignore this email or contact support if you have concerns.</p>
+      <p>Best regards,<br>Student Notes Hub Team</p>
+    </div>
+  `;
+
+    await sendEmail({
+        to: user.email,
+        subject: 'Password Reset OTP - Student Notes Hub',
+        html,
+    });
+};

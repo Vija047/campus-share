@@ -52,4 +52,22 @@ export const authService = {
         const user = localStorage.getItem('user');
         return user ? JSON.parse(user) : null;
     },
+
+    // Forgot password - send OTP
+    forgotPassword: async (email) => {
+        const response = await api.post('/auth/forgot-password', { email });
+        return response.data;
+    },
+
+    // Verify OTP
+    verifyOTP: async (email, otp) => {
+        const response = await api.post('/auth/verify-otp', { email, otp });
+        return response.data;
+    },
+
+    // Reset password
+    resetPassword: async (email, otp, newPassword) => {
+        const response = await api.post('/auth/reset-password', { email, otp, newPassword });
+        return response.data;
+    },
 };

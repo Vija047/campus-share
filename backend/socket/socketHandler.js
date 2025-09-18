@@ -48,6 +48,7 @@ export const initializeSocket = (server) => {
         // Join user to their semester room and general room
         socket.join(`semester-${socket.userSemester}`);
         socket.join('general');
+        socket.join(`user-${socket.userId}`); // Join user-specific room for targeted notifications
 
         // Send connection status to semester room
         socket.to(`semester-${socket.userSemester}`).emit('user-connected', {
@@ -261,7 +262,8 @@ export const initializeSocket = (server) => {
 // Function to emit notifications to specific users
 export const emitNotification = (userId, notification) => {
     if (io) {
-        io.emit('notification', notification);
+        // Emit to the specific user's room
+        io.to(`user-${userId}`).emit('notification', notification);
     }
 };
 

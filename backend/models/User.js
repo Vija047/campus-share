@@ -79,6 +79,14 @@ const userSchema = new mongoose.Schema({
     lastLogin: {
         type: Date,
         default: Date.now
+    },
+    resetOTP: {
+        type: String,
+        select: false
+    },
+    resetOTPExpires: {
+        type: Date,
+        select: false
     }
 }, {
     timestamps: true
