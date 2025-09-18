@@ -196,6 +196,99 @@ export const isSupportedDocument = (filename) => {
 };
 
 /**
+ * Determines if a file can be viewed directly in the browser
+ * @param {string} filename - The filename to check
+ * @returns {boolean} - True if the file can be viewed in browser
+ */
+export const isViewableInBrowser = (filename) => {
+    const viewableExtensions = ['pdf', 'txt', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
+    const extension = getFileExtension(filename);
+    return viewableExtensions.includes(extension);
+};
+
+/**
+ * Determines if a file needs a special viewer (like Google Docs Viewer)
+ * @param {string} filename - The filename to check
+ * @returns {boolean} - True if the file needs a special viewer
+ */
+export const needsSpecialViewer = (filename) => {
+    const specialViewerExtensions = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'];
+    const extension = getFileExtension(filename);
+    return specialViewerExtensions.includes(extension);
+};
+
+/**
+ * Gets the appropriate viewer URL for a file
+ * @param {string} fileUrl - The direct URL to the file
+ * @param {string} filename - The filename
+ * @returns {string} - The URL that can be used to view the file
+ */
+export const getViewerUrl = (fileUrl, filename) => {
+    // For files that can be viewed directly in browser
+    if (isViewableInBrowser(filename)) {
+        // For Cloudinary URLs, ensure we get the raw file without download headers
+        if (fileUrl.includes('cloudinary.com')) {
+            // Remove any existing fl_attachment parameter and add view parameters
+            let viewUrl = fileUrl.replace(/[?&]fl_attachment[^&]*/g, '');
+            const separator = viewUrl.includes('?') ? '&' : '?';
+            return `${viewUrl}${separator}fl_inline=true`;
+        }
+        return fileUrl;
+    }
+
+    // For Office documents, use Google Docs Viewer as fallback
+    if (needsSpecialViewer(filename)) {
+        return `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+    }
+
+    // Default fallback - try to open directly
+    return fileUrl;
+};
+
+/**
+ * Gets a human-readable description of how the file will be viewed
+ * @param {string} filename - The filename
+ * @returns {string} - Description of the viewing method
+ */
+export const getViewDescription = (filename) => {
+    const extension = getFileExtension(filename);
+
+    switch (extension) {
+        case 'pdf':
+            return 'Opens PDF in browser viewer';
+        case 'txt':
+            return 'Opens text file in browser';
+        case 'png':
+        case 'jpg':
+        case 'jpeg':
+        case 'gif':
+        case 'svg':
+        case 'webp':
+            return 'Opens image in browser';
+        case 'doc':
+        case 'docx':
+            return 'Opens in Google Docs Viewer';
+        case 'ppt':
+        case 'pptx':
+            return 'Opens in Google Slides Viewer';
+        case 'xls':
+        case 'xlsx':
+            return 'Opens in Google Sheets Viewer';
+        default:
+            return 'Opens in browser (if supported)';
+    }
+};
+
+/**
+ * Checks if a file type is supported for viewing
+ * @param {string} filename - The filename to check
+ * @returns {boolean} - True if the file can be viewed
+ */
+export const canViewFile = (filename) => {
+    return isViewableInBrowser(filename) || needsSpecialViewer(filename);
+};
+
+/**
  * Formats file size in human readable format
  * @param {number} bytes - File size in bytes
  * @returns {string} - Formatted file size

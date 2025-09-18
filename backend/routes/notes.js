@@ -6,10 +6,13 @@ import {
     getNote,
     toggleLike,
     downloadNote,
+    viewNote,
     generateShareableLink,
     getMyNotes,
     toggleBookmark,
-    getBookmarkedNotes
+    getBookmarkedNotes,
+    checkFileExists,
+    cleanupOrphanedNotes
 } from '../controllers/noteController.js';
 import { authenticate, optionalAuth } from '../middleware/auth.js';
 import { uploadFile, uploadError } from '../middleware/upload.js';
@@ -94,10 +97,13 @@ router.post('/upload',
 router.get('/', optionalAuth, getNotes);
 router.get('/my-notes', authenticate, getMyNotes);
 router.get('/bookmarked', authenticate, getBookmarkedNotes);
+router.get('/admin/cleanup-orphaned', authenticate, cleanupOrphanedNotes); // Admin route
 router.get('/:id', optionalAuth, getNote);
+router.get('/:id/check-file', authenticate, checkFileExists);
 router.post('/:id/like', authenticate, toggleLike);
 router.post('/:id/bookmark', authenticate, toggleBookmark);
 router.get('/:id/download', authenticate, downloadNote);
+router.get('/:id/view', optionalAuth, viewNote);
 router.post('/:id/share', authenticate, generateShareableLink);
 
 export default router;

@@ -13,22 +13,26 @@ import {
     User,
     FileText,
     ChevronDown,
-    Bookmark
+    Bookmark,
+    ExternalLink
 } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner.jsx';
 import Button from '../components/common/Button.jsx';
 import toast from 'react-hot-toast';
 import { downloadManager } from '../utils/downloadUtils.js';
+import { canViewFile, getViewerUrl, getViewDescription } from '../utils/downloadUtils.js';
 
 const Notes = () => {
     const { user } = useAuth();
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [downloadingNotes, setDownloadingNotes] = useState(new Set());
+    const [viewingNotes, setViewingNotes] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     const [filters, setFilters] = useState({
         semester: '',
         subject: '',
+        examType: '',
         sortBy: 'createdAt'
     });
     const [pagination, setPagination] = useState(null);
@@ -70,11 +74,14 @@ const Notes = () => {
     };
 
     const handleLike = async (noteId) => {
+        if (!user || !user.id) {
+            toast.error('Please log in to like notes');
+            return;
+        }
+
         try {
             const response = await noteService.toggleLike(noteId);
             toast.success(response.message);
-
-            // Update the notes list
             setNotes(notes.map(note =>
                 note._id === noteId
                     ? {
@@ -122,6 +129,21 @@ const Notes = () => {
                 throw new Error('File name not available');
             }
 
+            // Validate and clean the download URL
+            let cleanDownloadUrl = downloadUrl;
+            try {
+                // Parse URL to check if it's valid
+                const urlObj = new URL(downloadUrl);
+                cleanDownloadUrl = urlObj.toString();
+            } catch {
+                // If URL parsing fails, try to construct a proper URL
+                if (downloadUrl.startsWith('/uploads/')) {
+                    cleanDownloadUrl = `${window.location.protocol}//${window.location.host}:5000${downloadUrl}`;
+                } else if (!downloadUrl.startsWith('http')) {
+                    cleanDownloadUrl = `http://localhost:5000${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+                }
+            }
+
             // Update toast
             toast.dismiss(loadingToast);
 
@@ -129,7 +151,7 @@ const Notes = () => {
 
             // Try to download using the download manager for better user experience
             try {
-                const result = await downloadManager(downloadUrl, fileName, {
+                const result = await downloadManager(cleanDownloadUrl, fileName, {
                     onProgress: (progress) => {
                         // Update toast with progress if needed
                         if (progress % 25 === 0) { // Update every 25%
@@ -148,7 +170,7 @@ const Notes = () => {
                         // Show download location info
                         setTimeout(() => {
                             toast(`File saved to: ${result.location}`, {
-                                icon: '�',
+                                icon: '📁',
                                 duration: 4000
                             });
                         }, 1000);
@@ -164,9 +186,20 @@ const Notes = () => {
                             toast.error('Server error. Please try again in a few moments.');
                         } else if (error.message.includes('Access denied') || error.message.includes('403')) {
                             toast.error('Access denied. You may not have permission to download this file.');
+                        } else if (error.message.includes('URL') || error.message.includes('malformed')) {
+                            toast.error('Invalid file URL. Please contact support if this continues.');
                         } else {
                             toast.error(`Download failed: ${error.message}`);
                         }
+
+                        // Log detailed error for debugging
+                        console.error('Download error details:', {
+                            noteId,
+                            originalUrl: downloadUrl,
+                            cleanUrl: cleanDownloadUrl,
+                            fileName,
+                            error: error.message
+                        });
                     }
                 });
 
@@ -186,10 +219,24 @@ const Notes = () => {
             console.error('Error downloading note:', error);
             toast.dismiss();
 
-            // Show specific error message
+            // Show specific error message based on error type
             let errorMessage = 'Failed to download note. Please try again.';
 
-            if (error.message.includes('Network')) {
+            if (error.response) {
+                // Server responded with error status
+                const status = error.response.status;
+                const serverMessage = error.response.data?.message || error.response.data?.error;
+
+                if (status === 404) {
+                    errorMessage = 'File not found. It may have been removed or is no longer available.';
+                } else if (status === 403) {
+                    errorMessage = 'Access denied. You may not have permission to download this file.';
+                } else if (status === 500) {
+                    errorMessage = 'Server error. Please try again later.';
+                } else if (serverMessage) {
+                    errorMessage = serverMessage;
+                }
+            } else if (error.message.includes('Network')) {
                 errorMessage = 'Network error. Please check your internet connection.';
             } else if (error.message.includes('timeout')) {
                 errorMessage = 'Download timeout. Please try again.';
@@ -207,6 +254,158 @@ const Notes = () => {
         } finally {
             // Remove note from downloading set
             setDownloadingNotes(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(noteId);
+                return newSet;
+            });
+        }
+    };
+
+    const handleView = async (noteId) => {
+        // Prevent multiple simultaneous views of the same note
+        if (viewingNotes.has(noteId)) {
+            toast.error('View already in progress for this file');
+            return;
+        }
+
+        try {
+            // Add note to viewing set
+            setViewingNotes(prev => new Set([...prev, noteId]));
+
+            // Show loading toast
+            const loadingToast = toast.loading('Preparing to view file...');
+
+            // First try to get the view URL from the API
+            try {
+                const response = await noteService.viewNote(noteId);
+
+                if (!response || !response.data) {
+                    throw new Error('Invalid server response');
+                }
+
+                const { viewUrl, fileName } = response.data;
+
+                if (!viewUrl) {
+                    throw new Error('View URL not available');
+                }
+
+                if (!fileName) {
+                    throw new Error('File name not available');
+                }
+
+                // Validate and clean the view URL
+                let cleanViewUrl = viewUrl;
+                try {
+                    // Parse URL to check if it's valid
+                    const urlObj = new URL(viewUrl);
+                    cleanViewUrl = urlObj.toString();
+                } catch {
+                    // If URL parsing fails, try to construct a proper URL
+                    if (viewUrl.startsWith('/uploads/')) {
+                        cleanViewUrl = `${window.location.protocol}//${window.location.host}:5000${viewUrl}`;
+                    } else if (!viewUrl.startsWith('http')) {
+                        cleanViewUrl = `http://localhost:5000${viewUrl.startsWith('/') ? '' : '/'}${viewUrl}`;
+                    }
+                }
+
+                // Dismiss loading toast
+                toast.dismiss(loadingToast);
+
+                // Check if file can be viewed
+                if (!canViewFile(fileName)) {
+                    toast.error(`File type not supported for viewing. You can download the file instead.`);
+                    return;
+                }
+
+                // Get the appropriate viewer URL
+                const finalViewUrl = getViewerUrl(cleanViewUrl, fileName);
+
+                // Open in new tab/window
+                const newWindow = window.open(finalViewUrl, '_blank', 'noopener,noreferrer');
+
+                if (!newWindow) {
+                    // Popup blocked
+                    toast.error('Popup blocked. Please allow popups for this site and try again.');
+                } else {
+                    toast.success(`Opening "${fileName}" in new tab`);
+
+                    // Show viewing description
+                    setTimeout(() => {
+                        const description = getViewDescription(fileName);
+                        toast(description, {
+                            icon: '👁️',
+                            duration: 3000
+                        });
+                    }, 500);
+                }
+
+            } catch (apiError) {
+                console.warn('API view failed, trying fallback:', apiError);
+                toast.dismiss(loadingToast);
+
+                // Fallback: try to get download URL and convert to view URL
+                try {
+                    const downloadResponse = await noteService.downloadNote(noteId);
+                    const { downloadUrl, fileName } = downloadResponse.data;
+
+                    if (!canViewFile(fileName)) {
+                        toast.error(`File type not supported for viewing. You can download the file instead.`);
+                        return;
+                    }
+
+                    // Validate and clean the fallback URL
+                    let cleanFallbackUrl = downloadUrl;
+                    try {
+                        const urlObj = new URL(downloadUrl);
+                        cleanFallbackUrl = urlObj.toString();
+                    } catch {
+                        if (downloadUrl.startsWith('/uploads/')) {
+                            cleanFallbackUrl = `${window.location.protocol}//${window.location.host}:5000${downloadUrl}`;
+                        } else if (!downloadUrl.startsWith('http')) {
+                            cleanFallbackUrl = `http://localhost:5000${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+                        }
+                    }
+
+                    const fallbackViewUrl = getViewerUrl(cleanFallbackUrl, fileName);
+                    const newWindow = window.open(fallbackViewUrl, '_blank', 'noopener,noreferrer');
+
+                    if (!newWindow) {
+                        toast.error('Popup blocked. Please allow popups for this site and try again.');
+                    } else {
+                        toast.success(`Opening "${fileName}" in new tab (fallback)`);
+                    }
+
+                } catch (fallbackError) {
+                    console.error('Fallback view also failed:', fallbackError);
+                    toast.error('Failed to open file for viewing. You can try downloading it instead.');
+                }
+            }
+
+        } catch (error) {
+            console.error('Error viewing note:', error);
+            toast.dismiss();
+
+            // Show specific error message
+            let errorMessage = 'Failed to view note. Please try again.';
+
+            if (error.message.includes('Network')) {
+                errorMessage = 'Network error. Please check your internet connection.';
+            } else if (error.message.includes('timeout')) {
+                errorMessage = 'Request timeout. Please try again.';
+            } else if (error.message.includes('not found')) {
+                errorMessage = 'File not found. It may have been removed.';
+            } else if (error.message.includes('Invalid server response')) {
+                errorMessage = 'Server communication error. Please try again.';
+            } else if (error.message.includes('not available')) {
+                errorMessage = 'View information not available. The file may be corrupted.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            toast.error(errorMessage);
+        } finally {
+            // Remove note from viewing set
+            setViewingNotes(prev => {
                 const newSet = new Set(prev);
                 newSet.delete(noteId);
                 return newSet;
@@ -299,14 +498,6 @@ const Notes = () => {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    };
-
     if (loading && !notes.length) {
         return <LoadingSpinner text="Loading notes..." />;
     }
@@ -353,7 +544,7 @@ const Notes = () => {
 
                     {/* Filters Panel */}
                     {showFilters && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Semester
@@ -372,6 +563,26 @@ const Notes = () => {
                                     <option value="6">Semester 6</option>
                                     <option value="7">Semester 7</option>
                                     <option value="8">Semester 8</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Exam Type
+                                </label>
+                                <select
+                                    value={filters.examType}
+                                    onChange={(e) => setFilters({ ...filters, examType: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">All Types</option>
+                                    <option value="Mid-term">Mid-term Exam</option>
+                                    <option value="Final">Final Exam</option>
+                                    <option value="Quiz">Quiz</option>
+                                    <option value="Assignment">Assignment</option>
+                                    <option value="Lab Report">Lab Report</option>
+                                    <option value="Project">Project</option>
+                                    <option value="Study Material">Study Material</option>
+                                    <option value="Other">Other</option>
                                 </select>
                             </div>
                             <div>
@@ -415,129 +626,186 @@ const Notes = () => {
                         <p className="text-gray-600">Try adjusting your search or filters</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                         {notes.map((note) => (
-                            <div key={note._id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                                <div className="p-6">
-                                    {/* Note Header */}
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex-1">
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                                                {note.title}
-                                            </h3>
-                                            <div className="flex items-center text-sm text-gray-600 space-x-4">
-                                                <span className="flex items-center">
-                                                    <BookOpen className="w-4 h-4 mr-1" />
-                                                    {note.subject}
-                                                </span>
-                                                <span className="flex items-center">
-                                                    <Calendar className="w-4 h-4 mr-1" />
-                                                    Sem {note.semester}
-                                                </span>
-                                            </div>
+                            <div key={note._id} className="group bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-2xl hover:border-indigo-200 transition-all duration-500 transform hover:-translate-y-2 overflow-hidden backdrop-blur-sm">
+                                {/* Card Header with Professional Gradient */}
+                                <div className="relative">
+                                    <div className="h-40 bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-700 p-6 relative overflow-hidden">
+                                        {/* Geometric Background Pattern */}
+                                        <div className="absolute inset-0">
+                                            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent"></div>
+                                            <div className="absolute top-4 right-4 w-16 h-16 border-2 border-white/20 rounded-full"></div>
+                                            <div className="absolute bottom-4 left-4 w-12 h-12 border-2 border-white/20 rounded-lg rotate-45"></div>
+                                            <div className="absolute top-1/2 left-1/2 w-8 h-8 bg-white/10 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
                                         </div>
-                                        <div className="flex items-center space-x-1">
-                                            <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                                                {note.fileType?.toUpperCase()}
+
+                                        {/* File Type Badge */}
+                                        <div className="absolute top-4 right-4 z-20">
+                                            <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/95 text-gray-800 shadow-lg backdrop-blur-sm border border-white/20">
+                                                <FileText className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
+                                                {note.fileType?.toUpperCase() || 'PDF'}
                                             </span>
                                         </div>
+
+                                        {/* Document Icon and Info */}
+                                        <div className="relative z-10">
+                                            <div className="w-14 h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-3 border border-white/20 shadow-lg">
+                                                <FileText className="w-7 h-7 text-white" />
+                                            </div>
+                                            <div className="text-white">
+                                                <div className="flex items-center text-sm font-semibold mb-1">
+                                                    <BookOpen className="w-4 h-4 mr-2 opacity-90" />
+                                                    <span className="truncate">{note.subject}</span>
+                                                </div>
+                                                <div className="flex items-center text-xs opacity-85 mb-1">
+                                                    <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                                                    Semester {note.semester}
+                                                </div>
+                                                {note.examType && (
+                                                    <div className="flex items-center text-xs opacity-85">
+                                                        <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                                        {note.examType}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div className="p-7">
+                                    {/* Title */}
+                                    <h3 className="text-xl font-bold text-gray-900 mb-4 line-clamp-2 leading-tight tracking-tight">
+                                        {note.title}
+                                    </h3>
 
                                     {/* Description */}
                                     {note.description && (
-                                        <p className="text-gray-700 text-sm mb-4 line-clamp-3">
+                                        <p className="text-gray-600 text-sm mb-5 line-clamp-3 leading-relaxed">
                                             {note.description}
                                         </p>
                                     )}
 
                                     {/* Tags */}
                                     {note.tags && note.tags.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mb-4">
-                                            {note.tags.slice(0, 3).map((tag, index) => (
-                                                <span key={index} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
-                                                    {tag}
+                                        <div className="flex flex-wrap gap-2 mb-5">
+                                            {note.tags.slice(0, 2).map((tag, index) => (
+                                                <span key={index} className="px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                                                    #{tag}
                                                 </span>
                                             ))}
-                                            {note.tags.length > 3 && (
-                                                <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
-                                                    +{note.tags.length - 3} more
+                                            {note.tags.length > 2 && (
+                                                <span className="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-lg border border-gray-200">
+                                                    +{note.tags.length - 2} more
                                                 </span>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* Stats */}
-                                    <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                                        <div className="flex items-center space-x-3">
-                                            <span className="flex items-center">
-                                                <Heart className="w-4 h-4 mr-1" />
-                                                {note.likes?.length || 0}
+                                    {/* Stats Row */}
+                                    <div className="flex items-center justify-between text-sm text-gray-500 mb-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl px-4 border border-gray-100">
+                                        <div className="flex items-center space-x-5">
+                                            <span className="flex items-center hover:text-red-500 transition-colors cursor-pointer">
+                                                <Heart className="w-4 h-4 mr-1.5" />
+                                                <span className="font-medium">{note.likes?.length || 0}</span>
                                             </span>
-                                            <span className="flex items-center">
-                                                <Download className="w-4 h-4 mr-1" />
-                                                {note.downloads || 0}
+                                            <span className="flex items-center hover:text-green-500 transition-colors cursor-pointer">
+                                                <Download className="w-4 h-4 mr-1.5" />
+                                                <span className="font-medium">{note.downloads || 0}</span>
                                             </span>
-                                            <span className="flex items-center">
-                                                <Eye className="w-4 h-4 mr-1" />
-                                                {note.views || 0}
+                                            <span className="flex items-center hover:text-blue-500 transition-colors cursor-pointer">
+                                                <Eye className="w-4 h-4 mr-1.5" />
+                                                <span className="font-medium">{note.views || 0}</span>
                                             </span>
                                         </div>
-                                        <span>{formatFileSize(note.fileSize)}</span>
+                                        <span className="font-semibold text-gray-700 bg-white px-3 py-1 rounded-lg border border-gray-200">
+                                            {formatFileSize(note.fileSize)}
+                                        </span>
                                     </div>
 
-                                    {/* Uploader Info */}
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center">
-                                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium mr-3">
-                                                {note.uploader?.name?.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium text-gray-900">
-                                                    {note.uploader?.name}
-                                                </p>
-                                                <p className="text-xs text-gray-600">
-                                                    {formatDate(note.createdAt)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    {/* Actions */}
-                                    <div className="flex items-center space-x-2">
+                                    {/* Action Buttons */}
+                                    <div className="space-y-4">
+                                        {/* Primary Download Button */}
                                         <Button
-                                            size="sm"
                                             variant="primary"
                                             onClick={() => handleDownload(note._id)}
-                                            icon={Download}
-                                            className="flex-1"
+
+                                            className="w-full py-4 font-semibold text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl border-0 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                                             disabled={downloadingNotes.has(note._id)}
                                         >
-                                            {downloadingNotes.has(note._id) ? 'Downloading...' : 'Download'}
+                                            {downloadingNotes.has(note._id) ? (
+                                                <span className="flex items-center justify-center">
+                                                    <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3"></div>
+                                                    Downloading...
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center justify-center">
+                                                    <Download className="w-5 h-5 mr-2" />
+                                                    Download PDF
+                                                </span>
+                                            )}
                                         </Button>
-                                        <Button
-                                            size="sm"
-                                            variant={note.likes?.some(like => like.user === user?.id) ? "danger" : "outline"}
-                                            onClick={() => handleLike(note._id)}
-                                            icon={Heart}
-                                        >
-                                            {note.likes?.length || 0}
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant={note.isBookmarked ? "primary" : "outline"}
-                                            onClick={() => handleBookmark(note._id)}
-                                            icon={Bookmark}
-                                            disabled={note.bookmarkLoading}
-                                            title={note.isBookmarked ? "Remove from bookmarks" : "Add to bookmarks"}
-                                        >
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => handleShare(note._id)}
-                                            icon={Share2}
-                                        >
-                                        </Button>
+
+                                        {/* View in Browser Button - Only show for supported file types */}
+                                        {canViewFile(note.fileName || note.originalName || `file.${note.fileType}`) && (
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => handleView(note._id)}
+
+                                                className="w-full py-4 font-semibold text-sm border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-500 hover:text-white shadow-md hover:shadow-lg transition-all duration-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                                                disabled={viewingNotes.has(note._id)}
+                                                title={getViewDescription(note.fileName || note.originalName || `file.${note.fileType}`)}
+                                            >
+                                                {viewingNotes.has(note._id) ? (
+                                                    <span className="flex items-center justify-center">
+                                                        <div className="animate-spin w-5 h-5 border-2 border-current border-t-transparent rounded-full mr-3"></div>
+                                                        Opening...
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center justify-center">
+                                                        <ExternalLink className="w-5 h-5 mr-2" />
+                                                        Open in Browser
+                                                    </span>
+                                                )}
+                                            </Button>
+                                        )}
+
+                                        {/* Secondary Actions */}
+                                        <div className="flex items-center space-x-3">
+                                            <Button
+                                                size="sm"
+                                                variant={note.likes?.some(like => like.user === user?.id) ? "danger" : "outline"}
+                                                onClick={() => handleLike(note._id)}
+
+                                                className="flex-1 py-3 hover:scale-105 transition-all duration-200 rounded-xl font-medium shadow-sm hover:shadow-md"
+                                                title="Like this note"
+                                            >
+                                                <Heart className="w-4 h-4 mr-2" />
+                                                {note.likes?.length || 0}
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant={note.isBookmarked ? "primary" : "outline"}
+                                                onClick={() => handleBookmark(note._id)}
+
+                                                disabled={note.bookmarkLoading}
+                                                className="py-3 px-4 hover:scale-105 transition-all duration-200 rounded-xl font-medium shadow-sm hover:shadow-md"
+                                                title={note.isBookmarked ? "Remove from bookmarks" : "Add to bookmarks"}
+                                            >
+                                                <Bookmark className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleShare(note._id)}
+
+                                                className="py-3 px-4 hover:scale-105 transition-all duration-200 rounded-xl font-medium shadow-sm hover:shadow-md"
+                                                title="Share this note"
+                                            >
+                                                <Share2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

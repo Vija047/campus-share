@@ -5,10 +5,12 @@ import { uploadToCloudinary, getFileType } from '../utils/cloudinary.js';
 import { generateShareLink } from '../utils/jwt.js';
 import { saveFileLocally, deleteFileLocally } from '../utils/fileStorage.js';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// @desc    Upload note
-// @route   POST /api/notes/upload
-// @access  Private
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export const uploadNote = async (req, res) => {
     try {
         console.log('Upload request received:', {
@@ -21,9 +23,7 @@ export const uploadNote = async (req, res) => {
             user: req.user ? { id: req.user.id, name: req.user.name } : 'No user'
         });
 
-        const { title, subject, semester, description, tags } = req.body;
-
-        // Validate required fields
+        const { title, subject, semester, examType, description, tags } = req.body;
         if (!title || !title.trim()) {
             return res.status(400).json({
                 success: false,
@@ -42,6 +42,13 @@ export const uploadNote = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Semester is required'
+            });
+        }
+
+        if (!examType) {
+            return res.status(400).json({
+                success: false,
+                message: 'Exam type is required'
             });
         }
 
@@ -64,7 +71,7 @@ export const uploadNote = async (req, res) => {
             // For development: save file locally
             localFilename = `${Date.now()}-${req.file.originalname}`;
             const saveResult = await saveFileLocally(req.file.buffer, localFilename);
-            
+
             if (!saveResult.success) {
                 return res.status(500).json({
                     success: false,
@@ -98,6 +105,7 @@ export const uploadNote = async (req, res) => {
             title,
             subject,
             semester,
+            examType,
             description: description || 'No description provided',
             fileURL: fileURL,
             fileName: req.file.originalname,
@@ -164,18 +172,16 @@ export const uploadNote = async (req, res) => {
     }
 };
 
-// @desc    Get notes with filters
-// @route   GET /api/notes
-// @access  Public
 export const getNotes = async (req, res) => {
     try {
-        const { semester, subject, search, page = 1, limit = 10, sortBy = 'createdAt' } = req.query;
+        const { semester, subject, examType, search, page = 1, limit = 10, sortBy = 'createdAt' } = req.query;
 
         // Build query
         const query = { isApproved: true };
 
         if (semester) query.semester = semester;
         if (subject) query.subject = new RegExp(subject, 'i');
+        if (examType) query.examType = examType;
         if (search) {
             query.$or = [
                 { title: new RegExp(search, 'i') },
@@ -249,10 +255,6 @@ export const getNotes = async (req, res) => {
         });
     }
 };
-
-// @desc    Get single note
-// @route   GET /api/notes/:id
-// @access  Public
 export const getNote = async (req, res) => {
     try {
         const note = await Note.findById(req.params.id)
@@ -283,10 +285,6 @@ export const getNote = async (req, res) => {
         });
     }
 };
-
-// @desc    Like/Unlike note
-// @route   POST /api/notes/:id/like
-// @access  Private
 export const toggleLike = async (req, res) => {
     try {
         const note = await Note.findById(req.params.id);
@@ -343,10 +341,6 @@ export const toggleLike = async (req, res) => {
         });
     }
 };
-
-// @desc    Download note
-// @route   GET /api/notes/:id/download
-// @access  Private
 export const downloadNote = async (req, res) => {
     try {
         const note = await Note.findById(req.params.id);
@@ -356,6 +350,28 @@ export const downloadNote = async (req, res) => {
                 success: false,
                 message: 'Note not found'
             });
+        }
+
+        // Check if file exists for locally stored files
+        if (note.localFileName) {
+            const fs = await import('fs/promises');
+            const path = await import('path');
+            const { fileURLToPath } = await import('url');
+
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = path.dirname(__filename);
+            const filePath = path.join(__dirname, '..', 'uploads', note.localFileName);
+
+            try {
+                await fs.access(filePath);
+            } catch (error) {
+                console.error('Local file not found:', note.localFileName);
+                return res.status(404).json({
+                    success: false,
+                    message: 'File not found on server',
+                    error: `The file ${note.fileName} is no longer available`
+                });
+            }
         }
 
         // Check if user already downloaded
@@ -387,6 +403,16 @@ export const downloadNote = async (req, res) => {
         // Prepare download URL with appropriate flags for better downloading
         let downloadUrl = note.fileURL;
 
+        // Validate the base URL
+        if (!downloadUrl || typeof downloadUrl !== 'string') {
+            console.error('Invalid file URL for note:', note._id, downloadUrl);
+            return res.status(500).json({
+                success: false,
+                message: 'File URL is corrupted',
+                error: 'The file URL is invalid or missing'
+            });
+        }
+
         // If it's a Cloudinary URL, add download flags
         if (downloadUrl.includes('cloudinary.com')) {
             const separator = downloadUrl.includes('?') ? '&' : '?';
@@ -411,10 +437,81 @@ export const downloadNote = async (req, res) => {
         });
     }
 };
+export const viewNote = async (req, res) => {
+    try {
+        const note = await Note.findById(req.params.id);
 
-// @desc    Generate share link
-// @route   POST /api/notes/:id/share
-// @access  Private
+        if (!note) {
+            return res.status(404).json({
+                success: false,
+                message: 'Note not found'
+            });
+        }
+
+        // Increment view count if user is authenticated
+        if (req.user) {
+            // Check if user already viewed this note today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const viewedToday = note.viewedBy.some(view =>
+                view.user.toString() === req.user.id &&
+                view.date >= today
+            );
+
+            if (!viewedToday) {
+                // Add to viewed by
+                note.viewedBy.push({ user: req.user.id, date: new Date() });
+                note.views += 1;
+                await note.save();
+            }
+        }
+
+        // Prepare view URL for inline viewing (not download)
+        let viewUrl = note.fileURL;
+
+        // Validate the base URL
+        if (!viewUrl || typeof viewUrl !== 'string') {
+            console.error('Invalid file URL for note:', note._id, viewUrl);
+            return res.status(500).json({
+                success: false,
+                message: 'File URL is corrupted',
+                error: 'The file URL is invalid or missing'
+            });
+        }
+
+        // If it's a Cloudinary URL, ensure inline viewing
+        if (viewUrl.includes('cloudinary.com')) {
+            // Remove any existing fl_attachment parameter
+            viewUrl = viewUrl.replace(/[?&]fl_attachment[^&]*/g, '');
+            const separator = viewUrl.includes('?') ? '&' : '?';
+            viewUrl = `${viewUrl}${separator}fl_inline=true`;
+        } else if (viewUrl.includes('/uploads/')) {
+            // For local files, ensure the URL is properly formatted for browser viewing
+            // Add a timestamp parameter to prevent caching issues
+            const separator = viewUrl.includes('?') ? '&' : '?';
+            viewUrl = `${viewUrl}${separator}t=${Date.now()}`;
+        }
+
+        res.json({
+            success: true,
+            data: {
+                viewUrl: viewUrl,
+                fileName: note.fileName,
+                fileSize: note.fileSize,
+                mimeType: note.mimeType,
+                fileType: note.fileType
+            }
+        });
+    } catch (error) {
+        console.error('View note error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get view URL',
+            error: error.message
+        });
+    }
+};
 export const generateShareableLink = async (req, res) => {
     try {
         const note = await Note.findById(req.params.id);
@@ -447,10 +544,6 @@ export const generateShareableLink = async (req, res) => {
         });
     }
 };
-
-// @desc    Toggle bookmark on note
-// @route   POST /api/notes/:id/bookmark
-// @access  Private
 export const toggleBookmark = async (req, res) => {
     try {
         console.log('Toggle bookmark request:', {
@@ -544,10 +637,6 @@ export const toggleBookmark = async (req, res) => {
         });
     }
 };
-
-// @desc    Get bookmarked notes
-// @route   GET /api/notes/bookmarked
-// @access  Private
 export const getBookmarkedNotes = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
@@ -608,10 +697,6 @@ export const getBookmarkedNotes = async (req, res) => {
         });
     }
 };
-
-// @desc    Get my uploaded notes
-// @route   GET /api/notes/my-notes
-// @access  Private
 export const getMyNotes = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
@@ -640,6 +725,93 @@ export const getMyNotes = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to get your notes',
+            error: error.message
+        });
+    }
+};
+
+// Utility function to check and clean orphaned notes
+export const checkFileExists = async (req, res) => {
+    try {
+        const { noteId } = req.params;
+        const note = await Note.findById(noteId);
+
+        if (!note) {
+            return res.status(404).json({
+                success: false,
+                message: 'Note not found'
+            });
+        }
+
+        // For locally stored files, check if file exists
+        if (note.localFileName) {
+            const filePath = path.join(__dirname, '..', 'uploads', note.localFileName);
+
+            try {
+                await fs.access(filePath);
+                return res.json({
+                    success: true,
+                    message: 'File exists',
+                    data: { exists: true, fileName: note.fileName }
+                });
+            } catch (error) {
+                return res.json({
+                    success: true,
+                    message: 'File does not exist',
+                    data: { exists: false, fileName: note.fileName }
+                });
+            }
+        }
+
+        // For Cloudinary files, assume they exist (would need API call to verify)
+        return res.json({
+            success: true,
+            message: 'File stored on cloud',
+            data: { exists: true, fileName: note.fileName, cloudStored: true }
+        });
+
+    } catch (error) {
+        console.error('Check file exists error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check file existence',
+            error: error.message
+        });
+    }
+};
+
+// Admin function to clean up orphaned notes
+export const cleanupOrphanedNotes = async (req, res) => {
+    try {
+        const orphanedNotes = [];
+        const notes = await Note.find({ localFileName: { $exists: true, $ne: null } });
+
+        for (const note of notes) {
+            const filePath = path.join(__dirname, '..', 'uploads', note.localFileName);
+
+            try {
+                await fs.access(filePath);
+            } catch (error) {
+                orphanedNotes.push({
+                    noteId: note._id,
+                    title: note.title,
+                    fileName: note.fileName,
+                    localFileName: note.localFileName
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Found ${orphanedNotes.length} orphaned notes`,
+            data: { orphanedNotes }
+        });
+
+    } catch (error) {
+        console.error('Cleanup orphaned notes error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to cleanup orphaned notes',
             error: error.message
         });
     }

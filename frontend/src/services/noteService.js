@@ -76,6 +76,46 @@ export const noteService = {
         }
     },
 
+    // View note in browser
+    viewNote: async (id) => {
+        try {
+            const response = await api.get(`/notes/${id}/view`, {
+                timeout: 30000, // 30 seconds for view requests
+            });
+
+            // Validate response data
+            if (!response.data || !response.data.data) {
+                throw new Error('Invalid response format');
+            }
+
+            const { viewUrl, fileName } = response.data.data;
+
+            if (!viewUrl) {
+                throw new Error('View URL not provided');
+            }
+
+            if (!fileName) {
+                throw new Error('File name not provided');
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('View note service error:', error);
+
+            if (error.response) {
+                // Server responded with error status
+                const errorMessage = error.response.data?.message || 'Failed to get view URL';
+                throw new Error(errorMessage);
+            } else if (error.request) {
+                // Network error
+                throw new Error('Network error. Please check your connection and try again.');
+            } else {
+                // Other error
+                throw new Error(error.message || 'An unexpected error occurred');
+            }
+        }
+    },
+
     // Generate share link
     generateShareLink: async (id) => {
         const response = await api.post(`/notes/${id}/share`);
@@ -110,5 +150,25 @@ export const noteService = {
     getMyNotes: async (page = 1) => {
         const response = await api.get(`/notes/my-notes?page=${page}`);
         return response.data;
+    },
+
+    // Check if file exists for a note
+    checkFileExists: async (id) => {
+        try {
+            const response = await api.get(`/notes/${id}/check-file`, {
+                timeout: 10000, // 10 seconds
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Check file exists error:', error);
+            if (error.response) {
+                const errorMessage = error.response.data?.message || 'Failed to check file existence';
+                throw new Error(errorMessage);
+            } else if (error.request) {
+                throw new Error('Network error. Please check your connection and try again.');
+            } else {
+                throw new Error(error.message || 'An unexpected error occurred');
+            }
+        }
     },
 };

@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 export const saveFileLocally = async (fileBuffer, filename) => {
     try {
         const uploadDir = path.join(__dirname, '..', 'uploads');
-        
+
         // Ensure uploads directory exists
         try {
             await fs.access(uploadDir);
@@ -18,7 +18,7 @@ export const saveFileLocally = async (fileBuffer, filename) => {
 
         const filepath = path.join(uploadDir, filename);
         await fs.writeFile(filepath, fileBuffer);
-        
+
         return {
             success: true,
             filepath,
@@ -37,7 +37,7 @@ export const deleteFileLocally = async (filename) => {
     try {
         const uploadDir = path.join(__dirname, '..', 'uploads');
         const filepath = path.join(uploadDir, filename);
-        
+
         await fs.unlink(filepath);
         return { success: true };
     } catch (error) {

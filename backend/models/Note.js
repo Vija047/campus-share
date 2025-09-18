@@ -17,6 +17,12 @@ const noteSchema = new mongoose.Schema({
         required: [true, 'Semester is required'],
         enum: ['1', '2', '3', '4', '5', '6', '7', '8']
     },
+    examType: {
+        type: String,
+        required: [true, 'Exam type is required'],
+        enum: ['Mid-term', 'Final', 'Quiz', 'Assignment', 'Lab Report', 'Project', 'Study Material', 'Other'],
+        default: 'Study Material'
+    },
     description: {
         type: String,
         required: [true, 'Description is required'],
@@ -89,13 +95,23 @@ const noteSchema = new mongoose.Schema({
     views: {
         type: Number,
         default: 0
-    }
+    },
+    viewedBy: [{
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        date: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 }, {
     timestamps: true
 });
 
 // Indexes for better query performance
-noteSchema.index({ semester: 1, subject: 1 });
+noteSchema.index({ semester: 1, subject: 1, examType: 1 });
 noteSchema.index({ uploader: 1 });
 noteSchema.index({ createdAt: -1 });
 noteSchema.index({ likes: -1 });

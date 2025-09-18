@@ -37,15 +37,17 @@ app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false // Disable CSP for better PDF viewing compatibility
 }));
 
 // CORS configuration
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: ['http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Date', 'X-Api-Version'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Date', 'X-Api-Version', 'Range'],
+    exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges'], // Allow range headers for file streaming
     optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
 }));
 
@@ -59,8 +61,96 @@ app.options('*', cors());
 // Rate limiting
 app.use(generalLimiter);
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Custom file serving route with proper error handling and MIME types
+app.get('/uploads/:filename', async (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const filePath = path.join(__dirname, 'uploads', filename);
+
+        // Check if file exists
+        try {
+            await import('fs/promises').then(fs => fs.access(filePath));
+        } catch (error) {
+            return res.status(404).json({
+                success: false,
+                message: `File not found: ${filename}`,
+                error: 'The requested file does not exist on the server'
+            });
+        }
+
+        // Determine MIME type based on file extension
+        const ext = path.extname(filename).toLowerCase();
+        let mimeType = 'application/octet-stream'; // Default fallback
+
+        switch (ext) {
+            case '.pdf':
+                mimeType = 'application/pdf';
+                break;
+            case '.doc':
+                mimeType = 'application/msword';
+                break;
+            case '.docx':
+                mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                break;
+            case '.txt':
+                mimeType = 'text/plain';
+                break;
+            case '.ppt':
+                mimeType = 'application/vnd.ms-powerpoint';
+                break;
+            case '.pptx':
+                mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                break;
+            case '.xls':
+                mimeType = 'application/vnd.ms-excel';
+                break;
+            case '.xlsx':
+                mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                break;
+            case '.jpg':
+            case '.jpeg':
+                mimeType = 'image/jpeg';
+                break;
+            case '.png':
+                mimeType = 'image/png';
+                break;
+            case '.gif':
+                mimeType = 'image/gif';
+                break;
+        }
+
+        // Set proper headers for inline viewing
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', 'inline; filename="' + filename + '"');
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        res.setHeader('Accept-Ranges', 'bytes'); // Enable range requests for better streaming
+
+        // Special handling for PDFs to ensure proper rendering
+        if (ext === '.pdf') {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline';");
+        }
+
+        // Serve the file
+        res.sendFile(filePath, (err) => {
+            if (err) {
+                console.error('Error serving file:', err);
+                res.status(500).json({
+                    success: false,
+                    message: 'Error serving file',
+                    error: err.message
+                });
+            }
+        });
+    } catch (error) {
+        console.error('File serving error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while serving file',
+            error: error.message
+        });
+    }
+});
 
 // Handle favicon.ico requests
 app.get('/favicon.ico', (req, res) => {
@@ -103,11 +193,15 @@ app.use(errorHandler);
 // Database connection
 const connectDB = async () => {
     try {
+        if (!process.env.MONGODB_URI) {
+            console.log('⚠️  MongoDB URI not found, skipping database connection for testing');
+            return;
+        }
         const conn = await mongoose.connect(process.env.MONGODB_URI);
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
         console.error('MongoDB connection error:', error);
-        process.exit(1);
+        console.log('⚠️  Continuing without database for testing purposes');
     }
 };
 

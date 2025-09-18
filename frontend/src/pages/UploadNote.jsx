@@ -11,7 +11,8 @@ import {
     Tag,
     AlignLeft,
     CheckCircle,
-    AlertCircle
+    AlertCircle,
+    GraduationCap
 } from 'lucide-react';
 import Button from '../components/common/Button.jsx';
 import Input from '../components/common/Input.jsx';
@@ -29,6 +30,7 @@ const UploadNote = () => {
         title: '',
         subject: '',
         semester: user?.semester || '',
+        examType: '',
         description: '',
         tags: '',
         file: null
@@ -149,6 +151,10 @@ const UploadNote = () => {
             toast.error('Please select a semester');
             return;
         }
+        if (!formData.examType) {
+            toast.error('Please select an exam type');
+            return;
+        }
         if (!formData.description.trim()) {
             toast.error('Please enter a description');
             return;
@@ -165,6 +171,7 @@ const UploadNote = () => {
             uploadData.append('title', formData.title.trim());
             uploadData.append('subject', formData.subject.trim());
             uploadData.append('semester', String(formData.semester));
+            uploadData.append('examType', formData.examType);
             uploadData.append('description', formData.description.trim() || 'No description provided');
             uploadData.append('tags', formData.tags.trim());
             uploadData.append('file', formData.file);
@@ -173,6 +180,7 @@ const UploadNote = () => {
                 title: formData.title.trim(),
                 subject: formData.subject.trim(),
                 semester: formData.semester,
+                examType: formData.examType,
                 fileName: formData.file.name,
                 fileSize: formData.file.size,
                 fileType: formData.file.type
@@ -231,15 +239,7 @@ const UploadNote = () => {
                             <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Note</h1>
                             <p className="text-gray-600">Share your study materials with fellow students</p>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <div className={`w-3 h-3 rounded-full ${backendStatus === 'connected' ? 'bg-green-500' :
-                                backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'
-                                }`}></div>
-                            <span className="text-sm text-gray-600">
-                                {backendStatus === 'connected' ? 'Connected' :
-                                    backendStatus === 'disconnected' ? 'Disconnected' : 'Checking...'}
-                            </span>
-                        </div>
+
                     </div>
                 </div>
 
@@ -321,7 +321,7 @@ const UploadNote = () => {
 
                         {/* Note Details */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
+                            <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <FileText className="inline w-4 h-4 mr-1" />
                                     Title *
@@ -371,6 +371,29 @@ const UploadNote = () => {
                                     <option value="6">Semester 6</option>
                                     <option value="7">Semester 7</option>
                                     <option value="8">Semester 8</option>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <GraduationCap className="inline w-4 h-4 mr-1" />
+                                    Exam Type *
+                                </label>
+                                <Select
+                                    name="examType"
+                                    value={formData.examType}
+                                    onChange={handleInputChange}
+                                    required
+                                >
+                                    <option value="">Select Exam Type</option>
+                                    <option value="Mid-term">Mid-term Exam</option>
+                                    <option value="Final">Final Exam</option>
+                                    <option value="Quiz">Quiz</option>
+                                    <option value="Assignment">Assignment</option>
+                                    <option value="Lab Report">Lab Report</option>
+                                    <option value="Project">Project</option>
+                                    <option value="Study Material">Study Material</option>
+                                    <option value="Other">Other</option>
                                 </Select>
                             </div>
 
@@ -440,6 +463,10 @@ const UploadNote = () => {
                         <li className="flex items-start">
                             <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
                             Use clear, descriptive titles that indicate the topic and content
+                        </li>
+                        <li className="flex items-start">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                            Select the correct exam type to help others find relevant materials
                         </li>
                         <li className="flex items-start">
                             <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
