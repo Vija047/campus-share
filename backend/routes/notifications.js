@@ -1,72 +1,40 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import {
     getUserNotifications,
+    getNotificationCount,
     markAsRead,
     markAllAsRead,
     deleteNotification,
-    clearReadNotifications,
-    getNotificationCount
+    deleteAllNotifications,
+    createNotification
 } from '../controllers/notificationController.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
+// Apply authentication middleware to all notification routes
 router.use(authenticate);
 
-// Apply rate limiting to prevent spam
-const notificationLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 300, // Limit each user to 300 requests per 5 minutes (1 per second average)
-    message: {
-        success: false,
-        message: 'Too many notification requests, please try again in a moment.'
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skipSuccessfulRequests: true, // Don't count successful requests toward limit
-    keyGenerator: (req) => {
-        // Use user ID if authenticated, fallback to IP
-        return req.user?.id || req.ip;
-    },
-    // Allow burst requests but with a sliding window
-    skip: (req) => {
-        // Skip rate limiting for simple count requests during normal usage
-        return req.path === '/count' && req.method === 'GET';
-    }
-});
-
-router.use(notificationLimiter);
-
-// @route   GET /api/notifications
-// @desc    Get all notifications for authenticated user
-// @access  Private
+// GET /api/notifications - Get all notifications for the authenticated user
+// Query params: page, limit, unreadOnly, type
 router.get('/', getUserNotifications);
 
-// @route   GET /api/notifications/count
-// @desc    Get notification count summary
-// @access  Private
+// GET /api/notifications/count - Get notification count summary
 router.get('/count', getNotificationCount);
 
-// @route   PUT /api/notifications/mark-all-read
-// @desc    Mark all notifications as read
-// @access  Private
-router.put('/mark-all-read', markAllAsRead);
-
-// @route   DELETE /api/notifications/clear-read
-// @desc    Delete all read notifications
-// @access  Private
-router.delete('/clear-read', clearReadNotifications);
-
-// @route   PUT /api/notifications/:id/read
-// @desc    Mark specific notification as read
-// @access  Private
+// PUT /api/notifications/:id/read - Mark a specific notification as read
 router.put('/:id/read', markAsRead);
 
-// @route   DELETE /api/notifications/:id
-// @desc    Delete specific notification
-// @access  Private
+// PUT /api/notifications/mark-all-read - Mark all notifications as read
+router.put('/mark-all-read', markAllAsRead);
+
+// DELETE /api/notifications/:id - Delete a specific notification
 router.delete('/:id', deleteNotification);
+
+// DELETE /api/notifications - Delete all notifications for user
+router.delete('/', deleteAllNotifications);
+
+// POST /api/notifications - Create a new notification (for admin/system use)
+router.post('/', createNotification);
 
 export default router;

@@ -18,6 +18,7 @@ import NotFound from './pages/NotFound';
 // Import components
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import NotificationWrapper from './components/notifications/NotificationWrapper';
 
 import './App.css';
 
@@ -26,48 +27,49 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-gray-50">
-          <Layout>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/notes" element={<Notes />} />
+          <NotificationWrapper>
+            <Layout>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/notes" element={<Notes />} />
 
+                {/* Protected routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/upload" element={
+                  <ProtectedRoute>
+                    <UploadNote />
+                  </ProtectedRoute>
+                } />
+                <Route path="/chat" element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/bookmarks" element={
+                  <ProtectedRoute>
+                    <Bookmarks />
+                  </ProtectedRoute>
+                } />
 
-              {/* Protected routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/upload" element={
-                <ProtectedRoute>
-                  <UploadNote />
-                </ProtectedRoute>
-              } />
-              <Route path="/chat" element={
-                <ProtectedRoute>
-                  <Chat />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              <Route path="/bookmarks" element={
-                <ProtectedRoute>
-                  <Bookmarks />
-                </ProtectedRoute>
-              } />
-
-              {/* Catch all route */}
-              <Route path="/404" element={<NotFound />} />
-              <Route path="*" element={<Navigate to="/404" replace />} />
-            </Routes>
-          </Layout>
+                {/* Catch all route */}
+                <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Routes>
+            </Layout>
+          </NotificationWrapper>
 
           {/* Toast notifications */}
           <Toaster

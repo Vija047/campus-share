@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
     Menu,
@@ -10,38 +10,19 @@ import {
     Home,
     LogOut,
     Bookmark,
-    Bell,
     Search,
     Settings,
     Users,
     PieChart,
-    ChevronDown,
-    Trash2,
-    CheckCheck,
-    ExternalLink
+    ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useNotifications } from '../../hooks/useNotifications';
 import Button from '../common/Button';
 
 const Header = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const { user, isAuthenticated, logout } = useAuth();
-    const {
-        notifications,
-        unreadCount,
-        isLoading: notificationsLoading,
-        fetchNotifications,
-        fetchNotificationCount,
-        markAllAsRead,
-        deleteNotification,
-        handleNotificationClick,
-        formatMessage,
-        getIcon,
-        getRelativeTime
-    } = useNotifications();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -65,20 +46,6 @@ const Header = () => {
     const isActiveLink = (href) => {
         return location.pathname === href;
     };
-
-    // Fetch notifications when component mounts or when notifications dropdown opens
-    useEffect(() => {
-        if (isAuthenticated && isNotificationsOpen && !notificationsLoading) {
-            fetchNotifications({ limit: 10 });
-        }
-    }, [isAuthenticated, isNotificationsOpen, notificationsLoading, fetchNotifications]);
-
-    // Fetch notification count on mount
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchNotificationCount();
-        }
-    }, [isAuthenticated, fetchNotificationCount]);
 
     return (
         <header className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
@@ -104,8 +71,8 @@ const Header = () => {
                                 key={item.name}
                                 to={item.href}
                                 className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActiveLink(item.href)
-                                        ? 'bg-blue-50 text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                    ? 'bg-blue-50 text-blue-600 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                     }`}
                             >
                                 <item.icon className="w-4 h-4 mr-2" />
@@ -118,8 +85,8 @@ const Header = () => {
                                 key={item.name}
                                 to={item.href}
                                 className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActiveLink(item.href)
-                                        ? 'bg-blue-50 text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                    ? 'bg-blue-50 text-blue-600 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                     }`}
                             >
                                 <item.icon className="w-4 h-4 mr-2" />
@@ -137,106 +104,6 @@ const Header = () => {
 
                         {isAuthenticated ? (
                             <>
-                                {/* Notifications */}
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors relative"
-                                    >
-                                        <Bell className="w-5 h-5" />
-                                        {unreadCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                                                {unreadCount}
-                                            </span>
-                                        )}
-                                    </button>
-
-                                    {/* Notifications Dropdown */}
-                                    {isNotificationsOpen && (
-                                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                                            <div className="px-4 py-2 border-b border-gray-100 flex justify-between items-center">
-                                                <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
-                                                {unreadCount > 0 && (
-                                                    <button
-                                                        onClick={markAllAsRead}
-                                                        className="flex items-center text-sm text-blue-600 hover:text-blue-500 transition-colors"
-                                                        title="Mark all as read"
-                                                    >
-                                                        <CheckCheck className="w-4 h-4 mr-1" />
-                                                        Mark all read
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="max-h-96 overflow-y-auto">
-                                                {notificationsLoading ? (
-                                                    <div className="px-4 py-6 text-center text-gray-500">
-                                                        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-                                                        <p className="mt-2 text-sm">Loading notifications...</p>
-                                                    </div>
-                                                ) : notifications.length === 0 ? (
-                                                    <div className="px-4 py-6 text-center text-gray-500">
-                                                        <Bell className="w-12 h-12 mx-auto text-gray-300 mb-2" />
-                                                        <p className="text-sm">No notifications yet</p>
-                                                    </div>
-                                                ) : (
-                                                    notifications.map((notification) => (
-                                                        <div
-                                                            key={notification._id}
-                                                            className={`px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 relative group ${!notification.isRead ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                                                                }`}
-                                                            onClick={() => handleNotificationClick(notification, navigate)}
-                                                        >
-                                                            <div className="flex items-start justify-between">
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-center mb-1">
-                                                                        <span className="text-sm mr-2">
-                                                                            {getIcon(notification.type)}
-                                                                        </span>
-                                                                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                                                            {notification.type.replace('_', ' ')}
-                                                                        </span>
-                                                                        {!notification.isRead && (
-                                                                            <span className="ml-2 w-2 h-2 bg-blue-500 rounded-full"></span>
-                                                                        )}
-                                                                    </div>
-                                                                    <p className="text-sm text-gray-900 line-clamp-2">
-                                                                        {formatMessage(notification)}
-                                                                    </p>
-                                                                    <p className="text-xs text-gray-500 mt-1">
-                                                                        {getRelativeTime(notification.createdAt)}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            deleteNotification(notification._id);
-                                                                        }}
-                                                                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                                                                        title="Delete notification"
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4" />
-                                                                    </button>
-                                                                    <ExternalLink className="w-4 h-4 text-gray-400" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                            <div className="px-4 py-2 border-t border-gray-100">
-                                                <Link
-                                                    to="/notifications"
-                                                    className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
-                                                    onClick={() => setIsNotificationsOpen(false)}
-                                                >
-                                                    View all notifications
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
                                 {/* Profile Dropdown */}
                                 <div className="relative">
                                     <button
@@ -347,8 +214,8 @@ const Header = () => {
                                 key={item.name}
                                 to={item.href}
                                 className={`flex items-center px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActiveLink(item.href)
-                                        ? 'bg-blue-50 text-blue-600'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                    ? 'bg-blue-50 text-blue-600'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                     }`}
                                 onClick={() => setIsMenuOpen(false)}
                             >
@@ -365,8 +232,8 @@ const Header = () => {
                                         key={item.name}
                                         to={item.href}
                                         className={`flex items-center px-3 py-2 rounded-lg text-base font-medium transition-colors ${isActiveLink(item.href)
-                                                ? 'bg-blue-50 text-blue-600'
-                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                                            ? 'bg-blue-50 text-blue-600'
+                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                             }`}
                                         onClick={() => setIsMenuOpen(false)}
                                     >
@@ -408,12 +275,11 @@ const Header = () => {
             )}
 
             {/* Click outside to close dropdowns */}
-            {(isProfileOpen || isNotificationsOpen) && (
+            {isProfileOpen && (
                 <div
                     className="fixed inset-0 z-40"
                     onClick={() => {
                         setIsProfileOpen(false);
-                        setIsNotificationsOpen(false);
                     }}
                 ></div>
             )}
