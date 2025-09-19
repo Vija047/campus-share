@@ -44,6 +44,10 @@
             ]
         }
     ],
+    "env": {
+        "VITE_API_URL": "https://campus-share-apwi.vercel.app/api",
+        "VITE_SOCKET_URL": "https://campus-share-apwi.vercel.app"
+    },
     "regions": [
         "iad1"
     ],

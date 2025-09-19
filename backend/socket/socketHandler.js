@@ -9,7 +9,8 @@ export const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
             origin: [
-                "http://localhost:3000"
+                "http://localhost:3000",
+                "https://campus-share-apwi.vercel.app"
             ],
             methods: ["GET", "POST"],
             credentials: true

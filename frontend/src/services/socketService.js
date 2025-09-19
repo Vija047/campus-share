@@ -11,11 +11,21 @@ class SocketService {
             return;
         }
 
-        this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
+        // Use production URL for deployment, localhost for development
+        const socketUrl = import.meta.env.VITE_SOCKET_URL || 
+                         (import.meta.env.PROD ? 
+                          'https://campus-share-apwi.vercel.app' : 
+                          'http://localhost:5000');
+
+        this.socket = io(socketUrl, {
             auth: {
                 token,
             },
             autoConnect: true,
+            transports: ['websocket', 'polling'], // Support both transports for better compatibility
+            upgrade: true,
+            rememberUpgrade: true,
+            timeout: 20000, // Connection timeout
         });
 
         this.socket.on('connect', () => {
@@ -23,8 +33,13 @@ class SocketService {
             this.isConnected = true;
         });
 
-        this.socket.on('disconnect', () => {
-            console.log('Disconnected from socket server');
+        this.socket.on('disconnect', (reason) => {
+            console.log('Disconnected from socket server:', reason);
+            this.isConnected = false;
+        });
+
+        this.socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error);
             this.isConnected = false;
         });
 

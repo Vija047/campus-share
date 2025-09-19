@@ -105,7 +105,8 @@
         }
     ],
     "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "FRONTEND_URL": "https://campus-share-apwi.vercel.app"
     },
     "regions": [
         "iad1"
