@@ -1,93 +1,113 @@
 {
-  "version": 2,
-  "name": "campus-share",
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "frontend/dist"
-      }
+    "version": 2,
+    "name": "campus-share",
+    "builds": [
+        {
+            "src": "frontend/package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "frontend/dist"
+            }
+        },
+        {
+            "src": "backend/index.js",
+            "use": "@vercel/node",
+            "config": {
+                "maxLambdaSize": "50mb"
+            }
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/auth/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/notes/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/posts/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/chat/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/stats/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/notifications/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/uploads/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/socket.io/(.*)",
+            "dest": "/backend/index.js"
+        },
+        {
+            "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|webp))",
+            "dest": "/frontend/dist/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/frontend/dist/index.html"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/api/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "GET, POST, PUT, DELETE, OPTIONS"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "Content-Type, Authorization, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version"
+                }
+            ]
+        },
+        {
+            "source": "/uploads/(.*)",
+            "headers": [
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=86400"
+                }
+            ]
+        },
+        {
+            "source": "/assets/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=31536000, immutable"
+                }
+            ]
+        }
+    ],
+    "env": {
+        "NODE_ENV": "production"
     },
-    {
-      "src": "backend/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/auth/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/notes/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/posts/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/chat/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/stats/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/notifications/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/uploads/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/socket.io/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|webp))",
-      "dest": "/frontend/dist/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/dist/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version" }
-      ]
-    },
-    {
-      "source": "/uploads/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Cache-Control", "value": "public, max-age=86400" }
-      ]
-    },
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
-  "regions": ["iad1"]
+    "regions": [
+        "iad1"
+    ]
 }

@@ -8,7 +8,7 @@
       "config": {
         "includeFiles": [
           "uploads/**",
-          "utils/**", 
+          "utils/**",
           "models/**",
           "routes/**",
           "controllers/**",
@@ -19,18 +19,47 @@
     }
   ],
   "routes": [
-    { "src": "/uploads/(.*)", "dest": "/index.js" },
-    { "src": "/api/(.*)", "dest": "/index.js" },
-    { "src": "/auth/(.*)", "dest": "/index.js" },
-    { "src": "/notes/(.*)", "dest": "/index.js" },
-    { "src": "/posts/(.*)", "dest": "/index.js" },
-    { "src": "/chat/(.*)", "dest": "/index.js" },
-    { "src": "/stats/(.*)", "dest": "/index.js" },
-    { "src": "/socket.io/(.*)", "dest": "/index.js" },
-    { "src": "/(.*)", "dest": "/index.js" }
+    {
+      "src": "/uploads/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/auth/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/notes/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/posts/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/chat/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/stats/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/socket.io/(.*)",
+      "dest": "/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.js"
+    }
   ],
   "env": {
     "NODE_ENV": "production"
   },
-  "regions": ["iad1"]
+  "regions": [
+    "iad1"
+  ]
 }
