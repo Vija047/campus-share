@@ -1,0 +1,22 @@
+node_modules
+.git
+.vscode
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
+.DS_Store
+Thumbs.db
+
+# Backend development files
+backend/uploads/*
+!backend/uploads/test.txt
+
+# Frontend development files
+frontend/node_modules
+frontend/dist
+frontend/.vite
+
+# Other
+README.md
