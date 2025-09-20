@@ -44,12 +44,31 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-    origin: ['https://campus-share-jc2q.vercel.app/'],
+    origin: [
+        'https://campus-share-jc2q.vercel.app',
+        'https://campus-share-20rw6yk.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000'
+    ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Accept-Version', 'Content-Length', 'Content-MD5', 'Date', 'X-Api-Version', 'Range'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Accept-Version',
+        'Content-Length',
+        'Content-MD5',
+        'Date',
+        'X-Api-Version',
+        'Range',
+        'Origin',
+        'Access-Control-Allow-Origin'
+    ],
     exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges'], // Allow range headers for file streaming
-    optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+    optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+    preflightContinue: false
 }));
 
 // Body parsing middleware
@@ -58,6 +77,33 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Handle preflight requests
 app.options('*', cors());
+
+// Additional CORS middleware for manual handling
+app.use((req, res, next) => {
+    const allowedOrigins = [
+        'https://campus-share-jc2q.vercel.app',
+        'https://campus-share-20rw6yk.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000'
+    ];
+
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version, Range, Origin');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+
+    next();
+});
 
 // API routes for notifications (before rate limiting to allow frequent polling)
 app.use('/api/notifications', notificationRoutes);
@@ -168,22 +214,6 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/stats', statsRoutes);
-
-// Test endpoint for CORS debugging
-app.get('/api/test', (req, res) => {
-    res.json({ message: 'CORS test successful', timestamp: new Date().toISOString() });
-});
-
-// Test endpoint for file upload debugging  
-app.post('/api/test-upload', (req, res) => {
-    console.log('Test upload hit:', {
-        body: req.body,
-        headers: req.headers,
-        contentType: req.get('content-type')
-    });
-    res.json({ message: 'Test upload endpoint reached', body: req.body });
-});
-
 app.get("/", (req, res) => {
     res.send("hello sever started");
 });
