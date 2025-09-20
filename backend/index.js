@@ -45,10 +45,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
     origin: [
-        'https://campus-share-jc2q.vercel.app',
-        'https://campus-share-20rw6yk.vercel.app',
-        'http://localhost:5173',
-        'http://localhost:3000'
+        'https://campus-share-jc2q.vercel.app'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
