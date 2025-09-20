@@ -40,7 +40,7 @@ const UploadNote = () => {
     React.useEffect(() => {
         const checkBackend = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/test');
+                const response = await fetch('https://campus-share-zeta.vercel.app/api/test');
                 if (response.ok) {
                     setBackendStatus('connected');
                 } else {
