@@ -45,7 +45,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
     origin: [
-        'https://campus-share-jc2q.vercel.app'
+        'https://campusshare23.netlify.app'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
