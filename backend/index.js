@@ -41,7 +41,12 @@ app.use(
 );
 
 // Allowed origins
-const allowedOrigins = ['https://campusshare23.netlify.app'];
+const allowedOrigins = [
+  'https://campusshare2.netlify.app',
+  'https://campusshare23.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
 
 // CORS middleware
 app.use(
