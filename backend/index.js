@@ -217,15 +217,6 @@ const connectDB = async () => {
         console.error('MongoDB connection error:', error);
     }
 };
-
-// Graceful shutdown
-const gracefulShutdown = () => {
-    console.log('Shutting down gracefully...');
-    server.close(() => {
-        mongoose.connection.close(false, () => process.exit(0));
-    });
-};
-
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 process.on('uncaughtException', (err) => {
