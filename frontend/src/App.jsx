@@ -18,7 +18,6 @@ import NotFound from './pages/NotFound';
 // Import components
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
-import NotificationWrapper from './components/notifications/NotificationWrapper';
 
 import './App.css';
 
@@ -27,7 +26,7 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-gray-50">
-          <NotificationWrapper>
+       
             <Layout>
               <Routes>
                
@@ -69,7 +68,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/404" replace />} />
               </Routes>
             </Layout>
-          </NotificationWrapper>
+    
 
           {/* Toast notifications */}
           <Toaster
