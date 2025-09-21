@@ -180,6 +180,16 @@ app.get('/uploads/:filename', async (req, res) => {
 // Favicon
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', noteRoutes);
