@@ -30,14 +30,14 @@ function App() {
           <NotificationWrapper>
             <Layout>
               <Routes>
-                {/* Public routes */}
+               
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/notes" element={<Notes />} />
 
-                {/* Protected routes */}
+            
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <Dashboard />
@@ -64,7 +64,7 @@ function App() {
                   </ProtectedRoute>
                 } />
 
-                {/* Catch all route */}
+             
                 <Route path="/404" element={<NotFound />} />
                 <Route path="*" element={<Navigate to="/404" replace />} />
               </Routes>

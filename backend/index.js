@@ -34,49 +34,47 @@ app.set('trust proxy', 1);
 
 // Helmet security
 app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-    contentSecurityPolicy: false,
-  })
+    helmet({
+        crossOriginResourcePolicy: { policy: 'cross-origin' },
+        contentSecurityPolicy: false,
+    })
 );
 
 // Allowed origins
 const allowedOrigins = [
-  'https://campusshare2.netlify.app',
-  'https://campusshare23.netlify.app',
-  'http://localhost:5173',
-  'http://localhost:3000'
+    'https://campus-share-capw.vercel.app',
+    'http://localhost:3000'
 ];
 
 // CORS middleware
 app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-      'Accept-Version',
-      'Content-Length',
-      'Content-MD5',
-      'Date',
-      'X-Api-Version',
-      'Range',
-      'Origin',
-    ],
-    exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges'],
-    optionsSuccessStatus: 200,
-    preflightContinue: false,
-  })
+    cors({
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Requested-With',
+            'Accept',
+            'Accept-Version',
+            'Content-Length',
+            'Content-MD5',
+            'Date',
+            'X-Api-Version',
+            'Range',
+            'Origin',
+        ],
+        exposedHeaders: ['Content-Length', 'Content-Range', 'Accept-Ranges'],
+        optionsSuccessStatus: 200,
+        preflightContinue: false,
+    })
 );
 
 // Body parser
@@ -95,88 +93,88 @@ app.use(generalLimiter);
 
 // File serving
 app.get('/uploads/:filename', async (req, res) => {
-  try {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, 'uploads', filename);
-
-    const fs = await import('fs/promises');
     try {
-      await fs.access(filePath);
-    } catch {
-      return res.status(404).json({
-        success: false,
-        message: `File not found: ${filename}`,
-      });
+        const filename = req.params.filename;
+        const filePath = path.join(__dirname, 'uploads', filename);
+
+        const fs = await import('fs/promises');
+        try {
+            await fs.access(filePath);
+        } catch {
+            return res.status(404).json({
+                success: false,
+                message: `File not found: ${filename}`,
+            });
+        }
+
+        const ext = path.extname(filename).toLowerCase();
+        let mimeType = 'application/octet-stream';
+        switch (ext) {
+            case '.pdf':
+                mimeType = 'application/pdf';
+                break;
+            case '.doc':
+                mimeType = 'application/msword';
+                break;
+            case '.docx':
+                mimeType =
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                break;
+            case '.txt':
+                mimeType = 'text/plain';
+                break;
+            case '.ppt':
+                mimeType = 'application/vnd.ms-powerpoint';
+                break;
+            case '.pptx':
+                mimeType =
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                break;
+            case '.xls':
+                mimeType = 'application/vnd.ms-excel';
+                break;
+            case '.xlsx':
+                mimeType =
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                break;
+            case '.jpg':
+            case '.jpeg':
+                mimeType = 'image/jpeg';
+                break;
+            case '.png':
+                mimeType = 'image/png';
+                break;
+            case '.gif':
+                mimeType = 'image/gif';
+                break;
+        }
+
+        res.setHeader('Content-Type', mimeType);
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.setHeader('Accept-Ranges', 'bytes');
+
+        if (ext === '.pdf') {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader(
+                'Content-Security-Policy',
+                "default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline';"
+            );
+        }
+
+        res.sendFile(filePath, (err) => {
+            if (err) {
+                console.error('Error serving file:', err);
+                res.status(500).json({ success: false, message: 'Error serving file' });
+            }
+        });
+    } catch (error) {
+        console.error('File serving error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while serving file',
+        });
     }
-
-    const ext = path.extname(filename).toLowerCase();
-    let mimeType = 'application/octet-stream';
-    switch (ext) {
-      case '.pdf':
-        mimeType = 'application/pdf';
-        break;
-      case '.doc':
-        mimeType = 'application/msword';
-        break;
-      case '.docx':
-        mimeType =
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        break;
-      case '.txt':
-        mimeType = 'text/plain';
-        break;
-      case '.ppt':
-        mimeType = 'application/vnd.ms-powerpoint';
-        break;
-      case '.pptx':
-        mimeType =
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-        break;
-      case '.xls':
-        mimeType = 'application/vnd.ms-excel';
-        break;
-      case '.xlsx':
-        mimeType =
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        break;
-      case '.jpg':
-      case '.jpeg':
-        mimeType = 'image/jpeg';
-        break;
-      case '.png':
-        mimeType = 'image/png';
-        break;
-      case '.gif':
-        mimeType = 'image/gif';
-        break;
-    }
-
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
-    res.setHeader('Accept-Ranges', 'bytes');
-
-    if (ext === '.pdf') {
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader(
-        'Content-Security-Policy',
-        "default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline';"
-      );
-    }
-
-    res.sendFile(filePath, (err) => {
-      if (err) {
-        console.error('Error serving file:', err);
-        res.status(500).json({ success: false, message: 'Error serving file' });
-      }
-    });
-  } catch (error) {
-    console.error('File serving error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error while serving file',
-    });
-  }
 });
 
 // Favicon
@@ -198,43 +196,43 @@ app.use(errorHandler);
 
 // DB connection
 const connectDB = async () => {
-  try {
-    if (!process.env.MONGODB_URI) {
-      console.log('⚠️ MongoDB URI not found, skipping DB connection');
-      return;
+    try {
+        if (!process.env.MONGODB_URI) {
+            console.log('⚠️ MongoDB URI not found, skipping DB connection');
+            return;
+        }
+        const conn = await mongoose.connect(process.env.MONGODB_URI);
+        console.log(`MongoDB Connected: ${conn.connection.host}`);
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
     }
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-  }
 };
 
 // Graceful shutdown
 const gracefulShutdown = () => {
-  console.log('Shutting down gracefully...');
-  server.close(() => {
-    mongoose.connection.close(false, () => process.exit(0));
-  });
+    console.log('Shutting down gracefully...');
+    server.close(() => {
+        mongoose.connection.close(false, () => process.exit(0));
+    });
 };
 
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  process.exit(1);
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
 });
 process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-  server.close(() => process.exit(1));
+    console.error('Unhandled Rejection:', err);
+    server.close(() => process.exit(1));
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
 const startServer = async () => {
-  await connectDB();
-  server.listen(PORT, () =>
-    console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`)
-  );
+    await connectDB();
+    server.listen(PORT, () =>
+        console.log(`🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`)
+    );
 };
 startServer();
