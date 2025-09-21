@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL ||
         (import.meta.env.PROD ?
-            'https://campus-share-zeta.vercel.app/api' :
+            'https://campus-share-2.onrender.com/api' :
             '/api'),
     timeout: 60000, // Increased timeout for file uploads
     headers: {
