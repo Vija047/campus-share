@@ -10,7 +10,7 @@ export const initializeSocket = (server) => {
         cors: {
             origin: [
                 "http://localhost:3000",
-                "https://campus-share-capw.vercel.app"
+                "https://campus-share-nine.vercel.app"
             ],
             methods: ["GET", "POST"],
             credentials: true

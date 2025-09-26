@@ -42,7 +42,7 @@ app.use(
 
 // Allowed origins
 const allowedOrigins = [
-    'https://campus-share-capw.vercel.app',
+    'https://campus-share-nine.vercel.app',
     'http://localhost:3000'
 ];
 
