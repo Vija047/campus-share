@@ -8,10 +8,7 @@ let io;
 export const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
-            origin: [
-                "http://localhost:3000",
-                "https://campus-share-nine.vercel.app"
-            ],
+            origin: allowedOrigins, // 👈 USE the imported array
             methods: ["GET", "POST"],
             credentials: true
         }
@@ -94,7 +91,15 @@ export const initializeSocket = (server) => {
                 // Populate the message
                 const populatedMessage = await Chat.findById(chatMessage._id)
                     .populate('sender', 'name profilePicture')
-                    .populate('replyTo', 'message sender');
+                    .populate({
+                        path: 'replyTo',
+                        select: 'message sender',
+                        populate: {
+                            path: 'sender',
+                            select: 'name'
+                        }
+                    });
+
 
                 // Emit to the appropriate room
                 const roomName = semesterId === 'general' ? 'general' : `semester-${semesterId}`;
@@ -110,24 +115,19 @@ export const initializeSocket = (server) => {
         socket.on('edit-message', async (data) => {
             try {
                 const { messageId, newMessage } = data;
-
                 const chatMessage = await Chat.findById(messageId);
 
                 if (!chatMessage) {
-                    socket.emit('error', { message: 'Message not found' });
-                    return;
+                    return socket.emit('error', { message: 'Message not found' });
                 }
 
                 if (chatMessage.sender.toString() !== socket.userId) {
-                    socket.emit('error', { message: 'You can only edit your own messages' });
-                    return;
+                    return socket.emit('error', { message: 'You can only edit your own messages' });
                 }
 
-                // Check if message is not too old (15 minutes)
                 const timeDiff = Date.now() - chatMessage.createdAt.getTime();
-                if (timeDiff > 15 * 60 * 1000) {
-                    socket.emit('error', { message: 'Cannot edit messages older than 15 minutes' });
-                    return;
+                if (timeDiff > 15 * 60 * 1000) { // 15 minutes
+                    return socket.emit('error', { message: 'Cannot edit messages older than 15 minutes' });
                 }
 
                 chatMessage.message = newMessage;
@@ -138,7 +138,6 @@ export const initializeSocket = (server) => {
                 const populatedMessage = await Chat.findById(messageId)
                     .populate('sender', 'name profilePicture');
 
-                // Emit to the appropriate room
                 const roomName = chatMessage.semesterId === 'general' ? 'general' : `semester-${chatMessage.semesterId}`;
                 io.to(roomName).emit('message-edited', populatedMessage);
 
@@ -152,26 +151,22 @@ export const initializeSocket = (server) => {
         socket.on('delete-message', async (data) => {
             try {
                 const { messageId } = data;
-
                 const chatMessage = await Chat.findById(messageId);
 
                 if (!chatMessage) {
-                    socket.emit('error', { message: 'Message not found' });
-                    return;
+                    return socket.emit('error', { message: 'Message not found' });
                 }
 
                 if (chatMessage.sender.toString() !== socket.userId) {
-                    socket.emit('error', { message: 'You can only delete your own messages' });
-                    return;
+                    return socket.emit('error', { message: 'You can only delete your own messages' });
                 }
 
                 chatMessage.isDeleted = true;
                 chatMessage.message = 'This message was deleted';
                 await chatMessage.save();
 
-                // Emit to the appropriate room
                 const roomName = chatMessage.semesterId === 'general' ? 'general' : `semester-${chatMessage.semesterId}`;
-                io.to(roomName).emit('message-deleted', { messageId });
+                io.to(roomName).emit('message-deleted', { messageId, semesterId: chatMessage.semesterId });
 
             } catch (error) {
                 console.error('Delete message error:', error);
@@ -183,35 +178,26 @@ export const initializeSocket = (server) => {
         socket.on('add-reaction', async (data) => {
             try {
                 const { messageId, emoji } = data;
-
                 const chatMessage = await Chat.findById(messageId);
 
                 if (!chatMessage) {
-                    socket.emit('error', { message: 'Message not found' });
-                    return;
+                    return socket.emit('error', { message: 'Message not found' });
                 }
 
-                // Check if user already reacted with this emoji
-                const existingReaction = chatMessage.reactions.find(
-                    reaction => reaction.user.toString() === socket.userId && reaction.emoji === emoji
+                const reactionIndex = chatMessage.reactions.findIndex(
+                    r => r.user.toString() === socket.userId && r.emoji === emoji
                 );
 
-                if (existingReaction) {
-                    // Remove reaction
-                    chatMessage.reactions = chatMessage.reactions.filter(
-                        reaction => !(reaction.user.toString() === socket.userId && reaction.emoji === emoji)
-                    );
+                if (reactionIndex > -1) {
+                    // User is removing their reaction
+                    chatMessage.reactions.splice(reactionIndex, 1);
                 } else {
-                    // Add reaction
-                    chatMessage.reactions.push({
-                        user: socket.userId,
-                        emoji
-                    });
+                    // Add new reaction
+                    chatMessage.reactions.push({ user: socket.userId, emoji });
                 }
 
                 await chatMessage.save();
 
-                // Emit to the appropriate room
                 const roomName = chatMessage.semesterId === 'general' ? 'general' : `semester-${chatMessage.semesterId}`;
                 io.to(roomName).emit('reaction-updated', {
                     messageId,
@@ -249,7 +235,6 @@ export const initializeSocket = (server) => {
         socket.on('disconnect', () => {
             console.log(`User ${socket.userName} disconnected`);
 
-            // Notify semester room about disconnection
             socket.to(`semester-${socket.userSemester}`).emit('user-disconnected', {
                 userId: socket.userId,
                 userName: socket.userName
@@ -263,7 +248,6 @@ export const initializeSocket = (server) => {
 // Function to emit notifications to specific users
 export const emitNotification = (userId, notification) => {
     if (io) {
-        // Emit to the specific user's room
         io.to(`user-${userId}`).emit('notification', notification);
     }
 };
