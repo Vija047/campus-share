@@ -287,7 +287,7 @@ app.use(
 
 // Allowed origins
 const allowedOrigins = [
-    'https://campus-share-nine.vercel.app',
+    'https://campus-share-woad.vercel.app',
     'http://localhost:3000',
 ].filter(Boolean);
 
