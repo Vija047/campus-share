@@ -1,4 +1,4 @@
-# Campus Share - Student Notes Hub 📚
+# Campus Share - Student Notes Hub 
 
 A comprehensive MERN stack application designed to facilitate note sharing, collaboration, and community building among students. This platform enables students to upload, share, discover academic notes, engage in real-time chat, and build a supportive learning community.
 
