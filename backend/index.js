@@ -287,10 +287,8 @@ app.use(
 
 // Allowed origins
 const allowedOrigins = [
-    'https://campus-share-nine.vercel.app', // Vercel deployment
-    'https://campus-share-frontend.onrender.com', // Render frontend
-    'http://localhost:3000', // Local development
-    'http://localhost:5173', // Vite dev server
+    'https://campus-share-nine.vercel.app',
+    'http://localhost:3000',
 ].filter(Boolean);
 
 // CORS middleware

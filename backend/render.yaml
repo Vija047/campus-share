@@ -1,59 +1,31 @@
 services:
-  # Backend API Service
   - type: web
     name: campus-share-backend
     runtime: node
     plan: free
-    rootDir: ./backend
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
-    env: node
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      # Database
-      - key: MONGODB_URI
-        sync: false
-      # Authentication
-      - key: JWT_SECRET
-        generateValue: true
-      # Cloudinary (File Storage)
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
-        sync: false
-      # Email Service
-      - key: EMAIL_USER
-        sync: false
-      - key: EMAIL_PASS
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
-
-  # Frontend Static Site
-  - type: static
-    name: campus-share-frontend
-    buildCommand: cd frontend && npm install && npm run build
-    staticPublishPath: ./frontend/dist
-    envVars:
-      - key: NODE_ENV
-        value: production
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: public, max-age=0, must-revalidate
-      - path: /static/*
-        name: Cache-Control
-        value: public, max-age=31536000, immutable
-
-# Database
-databases:
-  - name: campus-share-mongodb
-    databaseName: campus_share
-    user: campus_user
-    plan: free
+    # Add your environment variables here
+    # Example:
+    # - key: MONGODB_URI
+    #   fromDatabase:
+    #     name: your-mongodb-database
+    #     property: connectionString
+    # - key: JWT_SECRET
+    #   generateValue: true
+    # - key: CLOUDINARY_CLOUD_NAME
+    #   sync: false
+    # - key: CLOUDINARY_API_KEY
+    #   sync: false
+    # - key: CLOUDINARY_API_SECRET
+    #   sync: false
+    # - key: EMAIL_USER
+    #   sync: false
+    # - key: EMAIL_PASS
+    #   sync: false
