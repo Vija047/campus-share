@@ -288,7 +288,7 @@ app.use(
 // Allowed origins
 const allowedOrigins = [
     'https://campus-share-nine.vercel.app',
-    'http://localhost:3000'   
+    'http://localhost:3000',
 ].filter(Boolean);
 
 // CORS middleware
