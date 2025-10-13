@@ -13,7 +13,6 @@ const Login = () => {
         password: ''
     });
     const [errors, setErrors] = useState({});
-
     const { login, isLoading, error } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -60,6 +59,9 @@ const Login = () => {
         const result = await login(formData);
         if (result.success) {
             navigate(from, { replace: true });
+        } else if (result.emailNotVerified && result.email) {
+            // Redirect to email verification page if email is not verified
+            navigate(`/verify-email?email=${encodeURIComponent(result.email)}`, { replace: true });
         }
     };
 
@@ -132,11 +134,22 @@ const Login = () => {
 
                     {/* Form Card */}
                     <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+                        {location.state?.message && (
+                            <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-400 rounded-md animate-fade-in">
+                                <div className="flex">
+                                    <div className="ml-3">
+                                        <p className="text-green-700 text-sm font-medium">{location.state.message}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {error && (
                             <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-md animate-fade-in">
                                 <div className="flex">
                                     <div className="ml-3">
                                         <p className="text-red-700 text-sm font-medium">{error}</p>
+
                                     </div>
                                 </div>
                             </div>

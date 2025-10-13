@@ -4,7 +4,7 @@ export const authService = {
     // Register new user
     register: async (userData) => {
         const response = await api.post('/auth/register', userData);
-        if (response.data.success) {
+        if (response.data.success && response.data.data?.token) {
             localStorage.setItem('token', response.data.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.data.user));
         }
@@ -70,4 +70,22 @@ export const authService = {
         const response = await api.post('/auth/reset-password', { email, otp, newPassword });
         return response.data;
     },
+
+    // Verify email
+    verifyEmail: async (email, verificationCode) => {
+        const response = await api.post('/auth/verify-email', { email, verificationCode });
+        if (response.data.success && response.data.data?.token) {
+            localStorage.setItem('token', response.data.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        }
+        return response.data;
+    },
+
+    // Resend verification code
+    resendVerificationCode: async (email) => {
+        const response = await api.post('/auth/resend-verification', { email });
+        return response.data;
+    },
+
+
 };

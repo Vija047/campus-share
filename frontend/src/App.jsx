@@ -7,12 +7,16 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import EmailVerification from './pages/EmailVerification';
+
 import Dashboard from './pages/Dashboard';
 import UploadNote from './pages/UploadNote';
+import Add from './pages/Add';
 import Notes from './pages/Notes';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import Bookmarks from './pages/Bookmarks';
+import Community from './pages/Community';
 import NotFound from './pages/NotFound';
 
 // Import components
@@ -26,49 +30,61 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-gray-50">
-       
-            <Layout>
-              <Routes>
-               
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/notes" element={<Notes />} />
 
-            
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/upload" element={
-                  <ProtectedRoute>
-                    <UploadNote />
-                  </ProtectedRoute>
-                } />
-                <Route path="/chat" element={
-                  <ProtectedRoute>
-                    <Chat />
-                  </ProtectedRoute>
-                } />
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } />
-                <Route path="/bookmarks" element={
-                  <ProtectedRoute>
-                    <Bookmarks />
-                  </ProtectedRoute>
-                } />
+          <Layout>
+            <Routes>
 
-             
-                <Route path="/404" element={<NotFound />} />
-                <Route path="*" element={<Navigate to="/404" replace />} />
-              </Routes>
-            </Layout>
-    
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/verify-email" element={<EmailVerification />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+
+              <Route path="/notes" element={<Notes />} />
+
+
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/upload" element={
+                <ProtectedRoute>
+                  <UploadNote />
+                </ProtectedRoute>
+              } />
+              <Route path="/add" element={
+                <ProtectedRoute>
+                  <Add />
+                </ProtectedRoute>
+              } />
+              <Route path="/chat" element={
+                <ProtectedRoute>
+                  <Chat />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } />
+              <Route path="/bookmarks" element={
+                <ProtectedRoute>
+                  <Bookmarks />
+                </ProtectedRoute>
+              } />
+              <Route path="/community" element={
+                <ProtectedRoute>
+                  <Community />
+                </ProtectedRoute>
+              } />
+
+
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<Navigate to="/404" replace />} />
+            </Routes>
+          </Layout>
+
 
           {/* Toast notifications */}
           <Toaster

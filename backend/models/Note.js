@@ -105,7 +105,35 @@ const noteSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         }
-    }]
+    }],
+    aiSummary: {
+        summary: {
+            type: String,
+            default: null
+        },
+        keyTopics: [{
+            type: String
+        }],
+        difficultyLevel: {
+            type: String,
+            enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert', null],
+            default: null
+        },
+        estimatedReadTime: {
+            type: Number, // in minutes
+            default: null
+        },
+        mainConcepts: [{
+            type: String
+        }],
+        suggestedPrerequisites: [{
+            type: String
+        }],
+        generatedAt: {
+            type: Date,
+            default: null
+        }
+    }
 }, {
     timestamps: true
 });

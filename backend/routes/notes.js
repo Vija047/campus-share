@@ -12,7 +12,8 @@ import {
     toggleBookmark,
     getBookmarkedNotes,
     checkFileExists,
-    cleanupOrphanedNotes
+    cleanupOrphanedNotes,
+    generateAISummaryForNote
 } from '../controllers/noteController.js';
 import { authenticate, optionalAuth } from '../middleware/auth.js';
 import { uploadFile, uploadError } from '../middleware/upload.js';
@@ -102,6 +103,7 @@ router.get('/:id', optionalAuth, getNote);
 router.get('/:id/check-file', authenticate, checkFileExists);
 router.post('/:id/like', authenticate, toggleLike);
 router.post('/:id/bookmark', authenticate, toggleBookmark);
+router.post('/:id/generate-ai-summary', authenticate, generateAISummaryForNote); // AI analysis
 router.get('/:id/download', authenticate, downloadNote);
 router.get('/:id/view', optionalAuth, viewNote);
 router.post('/:id/share', authenticate, generateShareableLink);

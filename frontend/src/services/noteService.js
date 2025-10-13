@@ -39,7 +39,17 @@ export const noteService = {
     // Download note
     downloadNote: async (id) => {
         try {
-            const response = await api.get(`/notes/${id}/download`, {
+            // Validate the note ID format
+            if (!id || typeof id !== 'string' || id.trim().length === 0) {
+                throw new Error('Invalid note ID provided');
+            }
+
+            // Clean the ID to remove any unwanted characters (like :1 from source maps)
+            const cleanId = id.replace(/:[0-9]+$/, '').trim();
+
+            console.log(`Attempting to download note with ID: ${cleanId}`);
+
+            const response = await api.get(`/notes/${cleanId}/download`, {
                 timeout: 30000, // 30 seconds for download requests
             });
 
@@ -64,8 +74,18 @@ export const noteService = {
 
             if (error.response) {
                 // Server responded with error status
+                const status = error.response.status;
                 const errorMessage = error.response.data?.message || 'Failed to download note';
-                throw new Error(errorMessage);
+
+                if (status === 404) {
+                    throw new Error('Note not found. The note may have been deleted or moved.');
+                } else if (status === 403) {
+                    throw new Error('Access denied. You may not have permission to download this note.');
+                } else if (status === 500) {
+                    throw new Error('Server error. Please try again later.');
+                } else {
+                    throw new Error(`${errorMessage} (Status: ${status})`);
+                }
             } else if (error.request) {
                 // Network error
                 throw new Error('Network error. Please check your connection and try again.');
@@ -163,6 +183,26 @@ export const noteService = {
             console.error('Check file exists error:', error);
             if (error.response) {
                 const errorMessage = error.response.data?.message || 'Failed to check file existence';
+                throw new Error(errorMessage);
+            } else if (error.request) {
+                throw new Error('Network error. Please check your connection and try again.');
+            } else {
+                throw new Error(error.message || 'An unexpected error occurred');
+            }
+        }
+    },
+
+    // Generate AI summary for a note
+    generateAISummary: async (id) => {
+        try {
+            const response = await api.post(`/notes/${id}/generate-ai-summary`, {}, {
+                timeout: 60000, // 60 seconds for AI processing
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Generate AI summary error:', error);
+            if (error.response) {
+                const errorMessage = error.response.data?.message || 'Failed to generate AI summary';
                 throw new Error(errorMessage);
             } else if (error.request) {
                 throw new Error('Network error. Please check your connection and try again.');

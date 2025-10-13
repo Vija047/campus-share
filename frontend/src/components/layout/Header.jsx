@@ -34,12 +34,14 @@ const Header = () => {
 
     const navigation = [
         { name: 'Home', href: '/', icon: Home },
-        { name: 'Notes', href: '/notes', icon: BookOpen }
+        { name: 'Notes', href: '/notes', icon: BookOpen },
+        { name: 'Community', href: '/community', icon: MessageSquare }
     ];
 
     const authenticatedNavigation = [
         { name: 'Dashboard', href: '/dashboard', icon: PieChart },
         { name: 'Upload', href: '/upload', icon: Upload },
+        { name: 'Add', href: '/add', icon: Users },
         { name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
     ];
 

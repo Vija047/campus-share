@@ -1,8 +1,24 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, updateProfile, forgotPassword, verifyOTP, resetPassword } from '../controllers/authController.js';
+import {
+    register,
+    login,
+    getMe,
+    updateProfile,
+    forgotPassword,
+    verifyOTP,
+    resetPassword,
+    verifyEmail,
+    resendVerificationCode
+} from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
+import {
+    registrationLimiter,
+    loginLimiter,
+    passwordResetLimiter
+} from '../middleware/authRateLimit.js';
+import { handleValidationErrorsDetailed } from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -82,13 +98,38 @@ const resetPasswordValidation = [
         .withMessage('New password must be at least 6 characters long')
 ];
 
+const verifyEmailValidation = [
+    body('email')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please enter a valid email'),
+    body('verificationCode')
+        .isLength({ min: 6, max: 6 })
+        .isNumeric()
+        .withMessage('Verification code must be a 6-digit number')
+];
+
+const resendVerificationValidation = [
+    body('email')
+        .isEmail()
+        .normalizeEmail()
+        .withMessage('Please enter a valid email')
+];
+
+
+
 // Routes
-router.post('/register', authLimiter, registerValidation, register);
-router.post('/login', authLimiter, loginValidation, login);
-router.post('/forgot-password', authLimiter, forgotPasswordValidation, forgotPassword);
-router.post('/verify-otp', authLimiter, verifyOTPValidation, verifyOTP);
-router.post('/reset-password', authLimiter, resetPasswordValidation, resetPassword);
+router.post('/register', registrationLimiter, registerValidation, handleValidationErrorsDetailed, register);
+router.post('/login', loginLimiter, loginValidation, handleValidationErrorsDetailed, login);
+
+// Email verification routes
+router.post('/verify-email', authLimiter, verifyEmailValidation, handleValidationErrorsDetailed, verifyEmail);
+router.post('/resend-verification', passwordResetLimiter, resendVerificationValidation, handleValidationErrorsDetailed, resendVerificationCode);
+
+router.post('/forgot-password', passwordResetLimiter, forgotPasswordValidation, handleValidationErrorsDetailed, forgotPassword);
+router.post('/verify-otp', authLimiter, verifyOTPValidation, handleValidationErrorsDetailed, verifyOTP);
+router.post('/reset-password', authLimiter, resetPasswordValidation, handleValidationErrorsDetailed, resetPassword);
 router.get('/me', authenticate, getMe);
-router.put('/profile', authenticate, profileValidation, updateProfile);
+router.put('/profile', authenticate, profileValidation, handleValidationErrorsDetailed, updateProfile);
 
 export default router;

@@ -6,13 +6,14 @@ import Notification from '../models/Notification.js';
 // @access  Private
 export const createPost = async (req, res) => {
     try {
-        const { content, semester, tags } = req.body;
+        const { content, semester, category, tags } = req.body;
 
         const post = await Post.create({
             content,
             author: req.user.id,
-            semester: semester || req.user.semester,
-            tags: tags ? tags.split(',').map(tag => tag.trim()) : []
+            semester: semester || req.user.semester || 'general',
+            category: category || 'general',
+            tags: Array.isArray(tags) ? tags : (tags ? tags.split(',').map(tag => tag.trim()) : [])
         });
 
         const populatedPost = await Post.findById(post._id)
@@ -38,25 +39,48 @@ export const createPost = async (req, res) => {
 // @access  Public
 export const getPosts = async (req, res) => {
     try {
-        const { semester, page = 1, limit = 10, sortBy = 'createdAt' } = req.query;
+        const {
+            semester,
+            category,
+            search,
+            page = 1,
+            limit = 10,
+            sort = 'createdAt',
+            sortOrder = 'desc'
+        } = req.query;
 
         // Build query
         const query = {};
-        if (semester && semester !== 'all') {
+        if (semester && semester !== 'all' && semester !== '') {
             query.semester = semester;
+        }
+        if (category && category !== '') {
+            query.category = category;
+        }
+        if (search && search.trim()) {
+            query.$or = [
+                { content: { $regex: search.trim(), $options: 'i' } },
+                { tags: { $in: [new RegExp(search.trim(), 'i')] } }
+            ];
         }
 
         // Build sort object
         const sortOptions = {};
-        switch (sortBy) {
-            case 'upvotes':
-                sortOptions.upvotes = -1;
+        const sortDirection = sortOrder === 'asc' ? 1 : -1;
+
+        switch (sort) {
+            case 'votes':
+                // Sort by net votes (upvotes - downvotes)
+                sortOptions.upvotesCount = sortDirection;
                 break;
             case 'replies':
-                sortOptions.replies = -1;
+                sortOptions.repliesCount = sortDirection;
+                break;
+            case 'upvotes':
+                sortOptions.upvotesCount = sortDirection;
                 break;
             default:
-                sortOptions.createdAt = -1;
+                sortOptions.createdAt = sortDirection;
         }
 
         const posts = await Post.find(query)
@@ -67,12 +91,25 @@ export const getPosts = async (req, res) => {
             .skip((page - 1) * limit)
             .exec();
 
+        // Add user vote information if user is authenticated
+        let postsWithUserVotes = posts;
+        if (req.user) {
+            postsWithUserVotes = posts.map(post => {
+                const postObj = post.toObject();
+                const userUpvoted = post.upvotes.some(vote => vote.user.toString() === req.user.id);
+                const userDownvoted = post.downvotes.some(vote => vote.user.toString() === req.user.id);
+
+                postObj.userVote = userUpvoted ? 'upvote' : userDownvoted ? 'downvote' : null;
+                return postObj;
+            });
+        }
+
         const total = await Post.countDocuments(query);
 
         res.json({
             success: true,
             data: {
-                posts,
+                posts: postsWithUserVotes,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: Math.ceil(total / limit),
@@ -289,6 +326,43 @@ export const deletePost = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to delete post',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Get community statistics
+// @route   GET /api/posts/stats
+// @access  Public
+export const getCommunityStats = async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const [totalPosts, postsToday, activeDiscussions] = await Promise.all([
+            Post.countDocuments(),
+            Post.countDocuments({ createdAt: { $gte: today } }),
+            Post.countDocuments({ 'replies.0': { $exists: true } })
+        ]);
+
+        // Get unique authors count
+        const uniqueAuthors = await Post.distinct('author');
+        const totalUsers = uniqueAuthors.length;
+
+        res.json({
+            success: true,
+            data: {
+                totalPosts,
+                totalUsers,
+                postsToday,
+                activeDiscussions
+            }
+        });
+    } catch (error) {
+        console.error('Get community stats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get community stats',
             error: error.message
         });
     }

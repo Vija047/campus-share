@@ -6,33 +6,56 @@ export const useSocket = () => {
     const [onlineUsers, setOnlineUsers] = useState([]);
 
     useEffect(() => {
-        setIsConnected(socketService.isConnected);
+        // Update connection status
+        const updateConnectionStatus = () => {
+            setIsConnected(socketService.isConnected);
+        };
 
-        // Listen for connection events
-        socketService.onUserConnected((data) => {
-            setOnlineUsers(prev => [...prev.filter(u => u.userId !== data.userId), data]);
-        });
+        updateConnectionStatus();
 
-        socketService.onUserDisconnected((data) => {
-            setOnlineUsers(prev => prev.filter(u => u.userId !== data.userId));
-        });
+        // Listen for connection events only if socket exists
+        if (socketService.socket) {
+            socketService.onUserConnected((data) => {
+                setOnlineUsers(prev => [...prev.filter(u => u.userId !== data.userId), data]);
+            });
+
+            socketService.onUserDisconnected((data) => {
+                setOnlineUsers(prev => prev.filter(u => u.userId !== data.userId));
+            });
+
+            // Listen for connection changes
+            socketService.socket.on('connect', updateConnectionStatus);
+            socketService.socket.on('disconnect', updateConnectionStatus);
+        }
 
         return () => {
-            socketService.off('user-connected');
-            socketService.off('user-disconnected');
+            if (socketService.socket) {
+                socketService.off('user-connected');
+                socketService.off('user-disconnected');
+                socketService.socket.off('connect', updateConnectionStatus);
+                socketService.socket.off('disconnect', updateConnectionStatus);
+            }
         };
     }, []);
 
     const joinRoom = (room) => {
-        socketService.joinRoom(room);
+        if (socketService.isConnected) {
+            socketService.joinRoom(room);
+        }
     };
 
     const leaveRoom = (room) => {
-        socketService.leaveRoom(room);
+        if (socketService.isConnected) {
+            socketService.leaveRoom(room);
+        }
     };
 
     const sendMessage = (data) => {
-        socketService.sendMessage(data);
+        if (socketService.isConnected) {
+            socketService.sendMessage(data);
+        } else {
+            console.warn('Cannot send message: Socket not connected');
+        }
     };
 
     return {

@@ -6,7 +6,8 @@ import {
     getPost,
     toggleVote,
     addReply,
-    deletePost
+    deletePost,
+    getCommunityStats
 } from '../controllers/postController.js';
 import { authenticate, optionalAuth } from '../middleware/auth.js';
 
@@ -38,6 +39,7 @@ const voteValidation = [
 ];
 
 // Routes
+router.get('/stats', getCommunityStats); // Must be before /:id route
 router.post('/', authenticate, postValidation, createPost);
 router.get('/', optionalAuth, getPosts);
 router.get('/:id', optionalAuth, getPost);

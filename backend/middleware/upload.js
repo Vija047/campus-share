@@ -1,8 +1,16 @@
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import fs from 'fs';
 
-// Configure multer for file uploads
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads with memory storage
+// This ensures the file is available as buffer in req.file.buffer
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {

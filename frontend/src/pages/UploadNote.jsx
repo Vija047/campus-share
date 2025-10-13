@@ -40,10 +40,15 @@ const UploadNote = () => {
     React.useEffect(() => {
         const checkBackend = async () => {
             try {
-                const response = await fetch('https://campus-share-2.onrender.com/api/test');
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                const response = await fetch(`${apiUrl}/test`, {
+                    timeout: 5000
+                });
                 if (response.ok) {
                     setBackendStatus('connected');
+                    console.log('Backend connection successful');
                 } else {
+                    console.error('Backend responded with error:', response.status);
                     setBackendStatus('disconnected');
                 }
             } catch (error) {
@@ -52,7 +57,16 @@ const UploadNote = () => {
             }
         };
         checkBackend();
-    }, []);
+
+        // Recheck every 30 seconds if disconnected
+        const interval = setInterval(() => {
+            if (backendStatus === 'disconnected') {
+                checkBackend();
+            }
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [backendStatus]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -63,6 +77,12 @@ const UploadNote = () => {
     };
 
     const handleFileSelect = (file) => {
+        console.log('File selected:', {
+            name: file.name,
+            type: file.type,
+            size: file.size
+        });
+
         // Validate file type
         const allowedTypes = [
             'application/pdf',
@@ -73,18 +93,26 @@ const UploadNote = () => {
             'text/plain',
             'image/jpeg',
             'image/png',
+            'image/jpg',
             'image/gif'
         ];
 
         if (!allowedTypes.includes(file.type)) {
-            toast.error('Please upload a valid file (PDF, DOC, DOCX, PPT, PPTX, TXT, or image)');
+            console.error('Invalid file type:', file.type);
+            toast.error(`Invalid file type: ${file.type}. Please upload PDF, DOC, DOCX, PPT, PPTX, TXT, or image files.`);
             return;
         }
 
         // Validate file size (max 50MB)
         const maxSize = 50 * 1024 * 1024; // 50MB
         if (file.size > maxSize) {
-            toast.error('File size must be less than 50MB');
+            toast.error(`File size (${formatFileSize(file.size)}) exceeds the 50MB limit`);
+            return;
+        }
+
+        // Check for empty files
+        if (file.size === 0) {
+            toast.error('Cannot upload empty files');
             return;
         }
 
@@ -98,6 +126,8 @@ const UploadNote = () => {
             toast.success(`Large file selected (${formatFileSize(file.size)}). Upload may take a few minutes.`, {
                 duration: 4000
             });
+        } else {
+            toast.success(`File selected: ${file.name} (${formatFileSize(file.size)})`);
         }
     };
 
@@ -143,6 +173,14 @@ const UploadNote = () => {
             toast.error('Please enter a title');
             return;
         }
+        if (formData.title.trim().length < 3) {
+            toast.error('Title must be at least 3 characters long');
+            return;
+        }
+        if (formData.title.trim().length > 100) {
+            toast.error('Title must be less than 100 characters long');
+            return;
+        }
         if (!formData.subject.trim()) {
             toast.error('Please enter a subject');
             return;
@@ -155,8 +193,9 @@ const UploadNote = () => {
             toast.error('Please select an exam type');
             return;
         }
-        if (!formData.description.trim()) {
-            toast.error('Please enter a description');
+        // Description is optional, but if provided, validate length
+        if (formData.description.trim() && formData.description.trim().length > 500) {
+            toast.error('Description must be less than 500 characters long');
             return;
         }
         if (!formData.file) {
@@ -198,15 +237,28 @@ const UploadNote = () => {
                 errorMessage = error.response.data.message;
             } else if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
                 // Handle validation errors
-                const validationErrors = error.response.data.errors.map(err => err.msg || err.message).join(', ');
+                const validationErrors = error.response.data.errors.map(err => err.msg || err.message || err).join(', ');
                 errorMessage = `Validation error: ${validationErrors}`;
+            } else if (error.response?.status === 413) {
+                errorMessage = 'File too large. Maximum size is 50MB.';
+            } else if (error.response?.status === 415) {
+                errorMessage = 'Invalid file type. Please upload PDF, DOC, DOCX, PPT, PPTX, TXT, or image files.';
+            } else if (error.response?.status === 401) {
+                errorMessage = 'Authentication failed. Please log in again.';
+            } else if (error.response?.status === 403) {
+                errorMessage = 'Access denied. Please check your permissions.';
+            } else if (error.response?.status >= 500) {
+                errorMessage = 'Server error. Please try again later.';
             } else if (error.message) {
                 errorMessage = error.message;
-            } else if (error.code === 'NETWORK_ERROR') {
+            } else if (error.code === 'NETWORK_ERROR' || !error.response) {
                 errorMessage = 'Network error. Please check your connection and try again.';
             }
 
-            toast.error(errorMessage);
+            toast.error(errorMessage, {
+                duration: 5000,
+                position: 'top-center'
+            });
         } finally {
             setLoading(false);
         }
@@ -325,15 +377,34 @@ const UploadNote = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <FileText className="inline w-4 h-4 mr-1" />
                                     Title *
+                                    <span className="text-xs text-gray-500 ml-1">
+                                        ({formData.title.length}/100 chars, min 3)
+                                    </span>
                                 </label>
                                 <Input
                                     type="text"
                                     name="title"
                                     value={formData.title}
                                     onChange={handleInputChange}
-                                    placeholder="Enter note title"
+                                    placeholder="Enter note title (minimum 3 characters)"
                                     required
+                                    minLength={3}
+                                    maxLength={100}
+                                    className={formData.title.length > 0 && formData.title.length < 3
+                                        ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                                        : ''
+                                    }
                                 />
+                                {formData.title.length > 0 && formData.title.length < 3 && (
+                                    <p className="mt-1 text-sm text-red-600">
+                                        Title must be at least 3 characters long
+                                    </p>
+                                )}
+                                {formData.title.length > 100 && (
+                                    <p className="mt-1 text-sm text-red-600">
+                                        Title must be less than 100 characters long
+                                    </p>
+                                )}
                             </div>
 
                             <div>
@@ -419,16 +490,28 @@ const UploadNote = () => {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 <AlignLeft className="inline w-4 h-4 mr-1" />
-                                Description *
+                                Description
+                                <span className="text-xs text-gray-500 ml-1">
+                                    (optional, {formData.description.length}/500 chars)
+                                </span>
                             </label>
                             <Textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
-                                placeholder="Provide a brief description of the note content..."
+                                placeholder="Provide a brief description of the note content (optional)..."
                                 rows={4}
-                                required
+                                maxLength={500}
+                                className={formData.description.length > 500
+                                    ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                                    : ''
+                                }
                             />
+                            {formData.description.length > 500 && (
+                                <p className="mt-1 text-sm text-red-600">
+                                    Description must be less than 500 characters long
+                                </p>
+                            )}
                             <p className="text-xs text-gray-500 mt-1">
                                 Describe what this note contains and what topics it covers
                             </p>

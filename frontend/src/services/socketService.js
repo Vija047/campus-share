@@ -12,42 +12,47 @@ class SocketService {
         }
 
         // Use production URL for deployment, localhost for development
-        const socketUrl = import.meta.env.VITE_SOCKET_URL ||
-            (import.meta.env.PROD ?
-                'https://campus-share-2.onrender.com/' :
-                'http://localhost:5000');
+        const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
-        this.socket = io(socketUrl, {
-            auth: {
-                token,
-            },
-            autoConnect: true,
-            transports: ['websocket', 'polling'], // Support both transports for better compatibility
-            upgrade: true,
-            rememberUpgrade: true,
-            timeout: 20000, // Connection timeout
-        });
+        try {
+            this.socket = io(socketUrl, {
+                auth: {
+                    token,
+                },
+                autoConnect: true,
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                timeout: 10000,
+            });
 
-        this.socket.on('connect', () => {
-            console.log('Connected to socket server');
-            this.isConnected = true;
-        });
+            this.socket.on('connect', () => {
+                console.log('✓ Connected to socket server');
+                this.isConnected = true;
+            });
 
-        this.socket.on('disconnect', (reason) => {
-            console.log('Disconnected from socket server:', reason);
+            this.socket.on('disconnect', (reason) => {
+                console.log('✗ Disconnected from socket server:', reason);
+                this.isConnected = false;
+            });
+
+            this.socket.on('connect_error', (error) => {
+                console.warn('Socket connection error:', error.message);
+                this.isConnected = false;
+                // Don't throw error, just log it
+            });
+
+            this.socket.on('error', (error) => {
+                console.error('Socket error:', error.message);
+            });
+
+            return this.socket;
+        } catch (error) {
+            console.error('Failed to initialize socket:', error);
             this.isConnected = false;
-        });
-
-        this.socket.on('connect_error', (error) => {
-            console.error('Socket connection error:', error);
-            this.isConnected = false;
-        });
-
-        this.socket.on('error', (error) => {
-            console.error('Socket error:', error);
-        });
-
-        return this.socket;
+            return null;
+        }
     }
 
     disconnect() {

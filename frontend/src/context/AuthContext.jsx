@@ -106,6 +106,7 @@ export const AuthProvider = ({ children }) => {
                     }
                 } catch (error) {
                     // Token might be expired or invalid
+                    console.warn('Token verification failed:', error);
                     authService.logout();
                     dispatch({ type: AUTH_ACTIONS.LOGOUT });
                 }
@@ -138,8 +139,16 @@ export const AuthProvider = ({ children }) => {
             }
         } catch (error) {
             const message = error.response?.data?.message || 'Login failed';
+            const emailNotVerified = error.response?.data?.emailNotVerified || false;
+            const email = error.response?.data?.email;
+
             dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: message });
-            return { success: false, message };
+            return {
+                success: false,
+                message,
+                emailNotVerified,
+                email
+            };
         }
     };
 
@@ -151,16 +160,10 @@ export const AuthProvider = ({ children }) => {
             const response = await authService.register(userData);
 
             if (response.success) {
-                dispatch({
-                    type: AUTH_ACTIONS.LOGIN_SUCCESS,
-                    payload: response.data.user,
-                });
-
-                // Connect to socket
-                socketService.connect(response.data.token);
-
-                toast.success('Registration successful!');
-                return { success: true };
+                // Registration successful, user needs to verify email
+                dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
+                toast.success(response.message || 'Registration successful! Please check your email to verify your account.');
+                return { success: true, email: response.data?.user?.email || userData.email };
             }
         } catch (error) {
             const message = error.response?.data?.message || 'Registration failed';
@@ -197,6 +200,8 @@ export const AuthProvider = ({ children }) => {
             return { success: false, message };
         }
     };
+
+
 
     // Clear error function
     const clearError = () => {

@@ -26,6 +26,7 @@ const notificationSchema = new mongoose.Schema({
             'new_note',       // New note uploaded in your subject/interest
             'note_approved',  // Your uploaded note was approved
             'note_rejected',  // Your uploaded note was rejected
+            'note_liked',     // Someone liked your note
             'follow',         // Someone followed you
             'message',        // New chat message
             'system'          // System notifications

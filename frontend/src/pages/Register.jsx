@@ -7,6 +7,7 @@ import Input from '../components/common/Input';
 import Select from '../components/common/Select';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
+
 const Register = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ const Register = () => {
         gender: ''
     });
     const [errors, setErrors] = useState({});
+
 
     const { register, isLoading, error } = useAuth();
     const navigate = useNavigate();
@@ -126,7 +128,8 @@ const Register = () => {
 
         const result = await register(formData);
         if (result.success) {
-            navigate('/dashboard', { replace: true });
+            // Redirect to email verification page with email as parameter
+            navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`, { replace: true });
         }
     };
 
@@ -169,7 +172,7 @@ const Register = () => {
                         </div>
                     </div>
                 </div>
-                
+
                 {/* Floating Elements */}
                 <div className="absolute top-16 left-20 w-20 h-20 bg-white bg-opacity-10 rounded-full backdrop-blur-sm"></div>
                 <div className="absolute bottom-28 right-16 w-16 h-16 bg-white bg-opacity-10 rounded-full backdrop-blur-sm"></div>
@@ -415,7 +418,7 @@ const Register = () => {
                                         Creating account...
                                     </div>
                                 ) : (
-                                    <div className="flex items-center">
+                                    <div className="flex items-center text-black ">
                                         Create Account
                                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                                     </div>
@@ -445,6 +448,8 @@ const Register = () => {
                     </div>
                 </div>
             </div>
+
+
         </div>
     );
 };

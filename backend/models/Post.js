@@ -16,6 +16,19 @@ const postSchema = new mongoose.Schema({
         required: [true, 'Semester is required'],
         enum: ['1', '2', '3', '4', '5', '6', '7', '8', 'general']
     },
+    category: {
+        type: String,
+        default: 'general',
+        enum: [
+            'general',
+            'academic',
+            'projects',
+            'internships',
+            'events',
+            'resources',
+            'announcements'
+        ]
+    },
     upvotes: [{
         user: {
             type: mongoose.Schema.Types.ObjectId,

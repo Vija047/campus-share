@@ -1,10 +1,11 @@
 import Note from '../models/Note.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
-import { createNotification } from './notificationController.js';
+import { createNotificationHelper } from './notificationController.js';
 import { uploadToCloudinary, getFileType } from '../utils/cloudinary.js';
 import { generateShareLink } from '../utils/jwt.js';
 import { saveFileLocally, deleteFileLocally } from '../utils/fileStorage.js';
+import { analyzeDocument } from '../utils/aiService.js';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs/promises';
 import path from 'path';
@@ -19,12 +20,21 @@ export const uploadNote = async (req, res) => {
             file: req.file ? {
                 originalname: req.file.originalname,
                 mimetype: req.file.mimetype,
-                size: req.file.size
+                size: req.file.size,
+                hasBuffer: !!req.file.buffer
             } : 'No file',
             user: req.user ? { id: req.user.id, name: req.user.name } : 'No user'
         });
 
         const { title, subject, semester, examType, description, tags } = req.body;
+
+        // Enhanced validation with better error messages
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required. Please log in to upload notes.'
+            });
+        }
         if (!title || !title.trim()) {
             return res.status(400).json({
                 success: false,
@@ -60,44 +70,78 @@ export const uploadNote = async (req, res) => {
             });
         }
 
+        if (!req.file.buffer && !req.file.path) {
+            return res.status(400).json({
+                success: false,
+                message: 'File upload failed - no file data received'
+            });
+        }
+
         let fileURL, uploadResult, localFilename;
+        let fileBuffer = req.file.buffer;
 
-        // Check if Cloudinary is properly configured
-        if (!process.env.CLOUDINARY_CLOUD_NAME ||
-            !process.env.CLOUDINARY_API_KEY ||
-            !process.env.CLOUDINARY_API_SECRET ||
-            process.env.CLOUDINARY_CLOUD_NAME === 'your_cloudinary_cloud_name' ||
-            process.env.CLOUDINARY_CLOUD_NAME === 'demo') {
-
-            // For development: save file locally
-            localFilename = `${Date.now()}-${req.file.originalname}`;
-            const saveResult = await saveFileLocally(req.file.buffer, localFilename);
-
-            if (!saveResult.success) {
+        // If no buffer (disk storage), read the file
+        if (!fileBuffer && req.file.path) {
+            try {
+                fileBuffer = await fs.readFile(req.file.path);
+                console.log('Read file from disk:', req.file.path);
+            } catch (readError) {
+                console.error('Failed to read uploaded file:', readError);
                 return res.status(500).json({
                     success: false,
-                    message: 'Failed to save file locally'
+                    message: 'Failed to process uploaded file'
+                });
+            }
+        }
+
+        // Try Cloudinary first, then fall back to local storage
+        let cloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME &&
+            process.env.CLOUDINARY_API_KEY &&
+            process.env.CLOUDINARY_API_SECRET &&
+            process.env.CLOUDINARY_CLOUD_NAME !== 'your_cloudinary_cloud_name' &&
+            process.env.CLOUDINARY_CLOUD_NAME !== 'demo';
+
+        if (cloudinaryConfigured) {
+            try {
+                // Upload file to Cloudinary
+                uploadResult = await uploadToCloudinary(fileBuffer, {
+                    folder: `notes/${semester}/${subject}`,
+                    resource_type: 'auto'
+                });
+                fileURL = uploadResult.secure_url;
+                console.log('File uploaded to Cloudinary successfully');
+            } catch (cloudinaryError) {
+                console.error('Cloudinary upload failed, falling back to local storage:', cloudinaryError);
+                cloudinaryConfigured = false; // Force fallback to local storage
+            }
+        }
+
+        // If Cloudinary is not configured or failed, save file locally
+        if (!cloudinaryConfigured) {
+            localFilename = `${Date.now()}-${req.file.originalname}`;
+            const saveResult = await saveFileLocally(fileBuffer, localFilename);
+
+            if (!saveResult.success) {
+                console.error('Failed to save file locally:', saveResult.error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'File upload failed. Could not save file locally: ' + (saveResult.error || 'Unknown error')
                 });
             }
 
             fileURL = `${req.protocol}://${req.get('host')}/uploads/${localFilename}`;
             uploadResult = { secure_url: fileURL };
 
-            console.log('⚠️  Cloudinary not configured, saved file locally:', localFilename);
-        } else {
+            console.log('⚠️  File saved locally:', localFilename);
+        }
+
+        // Clean up temporary file if it was stored on disk
+        if (req.file.path) {
             try {
-                // Upload file to Cloudinary
-                uploadResult = await uploadToCloudinary(req.file.buffer, {
-                    folder: `notes/${semester}/${subject}`,
-                    resource_type: 'auto'
-                });
-                fileURL = uploadResult.secure_url;
-            } catch (cloudinaryError) {
-                console.error('Cloudinary upload failed:', cloudinaryError);
-                return res.status(500).json({
-                    success: false,
-                    message: 'File upload failed. Please try again later.'
-                });
+                await fs.unlink(req.file.path);
+                console.log('Cleaned up temporary file:', req.file.path);
+            } catch (cleanupError) {
+                console.warn('Failed to clean up temporary file:', cleanupError);
             }
         }
 
@@ -118,6 +162,33 @@ export const uploadNote = async (req, res) => {
             tags: tags ? tags.split(',').map(tag => tag.trim()) : []
         });
 
+        // Analyze document with AI (non-blocking)
+        const fileType = getFileType(req.file.mimetype);
+        if (['pdf', 'ppt', 'pptx'].includes(fileType)) {
+            analyzeDocument(req.file.buffer, fileType, {
+                title,
+                subject,
+                semester,
+                examType,
+                tags: tags ? tags.split(',').map(tag => tag.trim()) : []
+            }).then(async (aiResult) => {
+                if (aiResult.success) {
+                    try {
+                        await Note.findByIdAndUpdate(note._id, {
+                            aiSummary: aiResult.data
+                        });
+                        console.log('AI analysis completed for note:', note._id);
+                    } catch (error) {
+                        console.error('Error saving AI summary:', error);
+                    }
+                } else {
+                    console.log('AI analysis skipped or failed:', aiResult.error);
+                }
+            }).catch(error => {
+                console.error('AI analysis error:', error);
+            });
+        }
+
         // Update user's notes count
         await User.findByIdAndUpdate(req.user.id, {
             $inc: { notesUploaded: 1 }
@@ -132,7 +203,7 @@ export const uploadNote = async (req, res) => {
 
         // Create notifications using the notification service
         const notificationPromises = sameYearUsers.map(user =>
-            createNotification({
+            createNotificationHelper({
                 recipient: user._id,
                 sender: req.user.id,
                 type: 'new_note',
@@ -190,7 +261,10 @@ export const getNotes = async (req, res) => {
             query.$or = [
                 { title: new RegExp(search, 'i') },
                 { description: new RegExp(search, 'i') },
-                { tags: new RegExp(search, 'i') }
+                { tags: new RegExp(search, 'i') },
+                { 'aiSummary.keyTopics': new RegExp(search, 'i') },
+                { 'aiSummary.mainConcepts': new RegExp(search, 'i') },
+                { 'aiSummary.suggestedPrerequisites': new RegExp(search, 'i') }
             ];
         }
 
@@ -347,7 +421,20 @@ export const toggleLike = async (req, res) => {
 };
 export const downloadNote = async (req, res) => {
     try {
-        const note = await Note.findById(req.params.id);
+        const { id } = req.params;
+
+        // Validate note ID format
+        if (!id || typeof id !== 'string' || id.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid note ID provided'
+            });
+        }
+
+        // Clean the ID to remove any unwanted characters
+        const cleanId = id.replace(/:[0-9]+$/, '').trim();
+
+        const note = await Note.findById(cleanId);
 
         if (!note) {
             return res.status(404).json({
@@ -370,10 +457,16 @@ export const downloadNote = async (req, res) => {
                 await fs.access(filePath);
             } catch (error) {
                 console.error('Local file not found:', note.localFileName);
+
+                // Log the orphaned note for admin attention
+                console.warn(`Orphaned note detected - ID: ${note._id}, Title: ${note.title}, Missing file: ${note.localFileName}`);
+
                 return res.status(404).json({
                     success: false,
                     message: 'File not found on server',
-                    error: `The file ${note.fileName} is no longer available`
+                    error: `The file "${note.fileName}" is no longer available. Please contact support if this persists.`,
+                    orphaned: true, // Flag to help frontend handle this case
+                    noteId: note._id
                 });
             }
         }
@@ -787,8 +880,11 @@ export const checkFileExists = async (req, res) => {
 // Admin function to clean up orphaned notes
 export const cleanupOrphanedNotes = async (req, res) => {
     try {
+        const { remove = false } = req.query; // Query parameter to actually remove notes
         const orphanedNotes = [];
         const notes = await Note.find({ localFileName: { $exists: true, $ne: null } });
+
+        console.log(`Checking ${notes.length} notes with local files for orphaned entries...`);
 
         for (const note of notes) {
             const filePath = path.join(__dirname, '..', 'uploads', note.localFileName);
@@ -800,15 +896,33 @@ export const cleanupOrphanedNotes = async (req, res) => {
                     noteId: note._id,
                     title: note.title,
                     fileName: note.fileName,
-                    localFileName: note.localFileName
+                    localFileName: note.localFileName,
+                    uploader: note.uploader
                 });
             }
         }
 
+        let removedCount = 0;
+        if (remove === 'true' && orphanedNotes.length > 0) {
+            // Actually remove orphaned notes from database
+            const noteIds = orphanedNotes.map(note => note.noteId);
+            const deleteResult = await Note.deleteMany({ _id: { $in: noteIds } });
+            removedCount = deleteResult.deletedCount;
+            console.log(`Removed ${removedCount} orphaned notes from database`);
+        }
+
+        const message = remove === 'true'
+            ? `Found and removed ${removedCount} orphaned notes`
+            : `Found ${orphanedNotes.length} orphaned notes (use ?remove=true to delete them)`;
+
         res.json({
             success: true,
-            message: `Found ${orphanedNotes.length} orphaned notes`,
-            data: { orphanedNotes }
+            message,
+            data: {
+                orphanedNotes: remove === 'true' ? [] : orphanedNotes,
+                removedCount: remove === 'true' ? removedCount : 0,
+                dryRun: remove !== 'true'
+            }
         });
 
     } catch (error) {
@@ -816,6 +930,88 @@ export const cleanupOrphanedNotes = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to cleanup orphaned notes',
+            error: error.message
+        });
+    }
+};
+
+// Generate AI summary for a note
+export const generateAISummaryForNote = async (req, res) => {
+    try {
+        const { noteId } = req.params;
+
+        const note = await Note.findById(noteId);
+        if (!note) {
+            return res.status(404).json({
+                success: false,
+                message: 'Note not found'
+            });
+        }
+
+        // Check if user is the uploader or admin
+        if (note.uploader.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to generate AI summary for this note'
+            });
+        }
+
+        // If AI summary already exists and was generated recently (within 24 hours), return it
+        if (note.aiSummary && note.aiSummary.generatedAt) {
+            const hoursSinceGeneration = (Date.now() - new Date(note.aiSummary.generatedAt).getTime()) / (1000 * 60 * 60);
+            if (hoursSinceGeneration < 24) {
+                return res.json({
+                    success: true,
+                    message: 'AI summary already exists',
+                    data: { aiSummary: note.aiSummary, cached: true }
+                });
+            }
+        }
+
+        // Download the file
+        let fileBuffer;
+        if (note.localFileName) {
+            const filePath = path.join(__dirname, '..', 'uploads', note.localFileName);
+            fileBuffer = await fs.readFile(filePath);
+        } else {
+            // Download from Cloudinary
+            const axios = (await import('axios')).default;
+            const response = await axios.get(note.fileURL, { responseType: 'arraybuffer' });
+            fileBuffer = Buffer.from(response.data);
+        }
+
+        // Analyze document
+        const aiResult = await analyzeDocument(fileBuffer, note.fileType, {
+            title: note.title,
+            subject: note.subject,
+            semester: note.semester,
+            examType: note.examType,
+            tags: note.tags
+        });
+
+        if (!aiResult.success) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to generate AI summary',
+                error: aiResult.error
+            });
+        }
+
+        // Update note with AI summary
+        note.aiSummary = aiResult.data;
+        await note.save();
+
+        res.json({
+            success: true,
+            message: 'AI summary generated successfully',
+            data: { aiSummary: aiResult.data }
+        });
+
+    } catch (error) {
+        console.error('Generate AI summary error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to generate AI summary',
             error: error.message
         });
     }

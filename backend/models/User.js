@@ -29,7 +29,21 @@ const userSchema = new mongoose.Schema({
     department: {
         type: String,
         required: [true, 'Department is required'],
-        enum: ['Computer Science', 'Information Technology', 'Electronics', 'Mechanical', 'Civil', 'Electrical', 'Chemical', 'Biotechnology', 'Other']
+        enum: [
+            'Computer Science',
+            'Information Technology',
+            'Electronics and Communication',
+            'Electrical Engineering',
+            'Mechanical Engineering',
+            'Civil Engineering',
+            'Chemical Engineering',
+            'Biotechnology',
+            'Mathematics',
+            'Physics',
+            'Chemistry',
+            'Business Administration',
+            'Other'
+        ]
     },
     gender: {
         type: String,
@@ -87,6 +101,30 @@ const userSchema = new mongoose.Schema({
     resetOTPExpires: {
         type: Date,
         select: false
+    },
+    resetOTPUsed: {
+        type: Boolean,
+        default: false,
+        select: false
+    },
+    isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
+    emailVerificationCode: {
+        type: String,
+        select: false
+    },
+    emailVerificationExpires: {
+        type: Date,
+        select: false
+    },
+    failedLoginAttempts: {
+        type: Number,
+        default: 0
+    },
+    accountLockedUntil: {
+        type: Date
     }
 }, {
     timestamps: true
@@ -109,6 +147,38 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
 userSchema.methods.updateLastLogin = function () {
     this.lastLogin = new Date();
     return this.save({ validateBeforeSave: false });
+};
+
+// Virtual for checking if account is locked
+userSchema.virtual('isLocked').get(function () {
+    return !!(this.failedLoginAttempts >= 5 && this.accountLockedUntil && Date.now() < this.accountLockedUntil);
+});
+
+// Increment failed login attempts
+userSchema.methods.incLoginAttempts = function () {
+    // If we have a previous lock that has expired, restart at 1
+    if (this.accountLockedUntil && this.accountLockedUntil < Date.now()) {
+        return this.updateOne({
+            $unset: { accountLockedUntil: 1 },
+            $set: { failedLoginAttempts: 1 }
+        });
+    }
+
+    const updates = { $inc: { failedLoginAttempts: 1 } };
+
+    // Lock account after 5 failed attempts for 2 hours
+    if (this.failedLoginAttempts + 1 >= 5 && !this.isLocked) {
+        updates.$set = { accountLockedUntil: Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
+    }
+
+    return this.updateOne(updates);
+};
+
+// Reset failed login attempts
+userSchema.methods.resetLoginAttempts = function () {
+    return this.updateOne({
+        $unset: { failedLoginAttempts: 1, accountLockedUntil: 1 }
+    });
 };
 
 export default mongoose.model('User', userSchema);
