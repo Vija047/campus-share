@@ -9,7 +9,7 @@ try {
         const { GoogleGenerativeAI } = module;
         console.log('✓ @google/generative-ai imported successfully');
         console.log('✓ GoogleGenerativeAI constructor available:', typeof GoogleGenerativeAI === 'function');
-        
+
         // Test instantiation (without API key)
         try {
             new GoogleGenerativeAI('test-key');
@@ -17,7 +17,7 @@ try {
         } catch (e) {
             console.log('⚠ GoogleGenerativeAI instantiation issue:', e.message);
         }
-        
+
         console.log('All tests passed!');
         process.exit(0);
     }).catch((error) => {
