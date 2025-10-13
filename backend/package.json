@@ -9,7 +9,8 @@
         "dev": "nodemon index.js",
         "build": "echo 'No build step required for Node.js backend'",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "test-email": "node scripts/testEmailConfig.js"
+        "test-email": "node scripts/testEmailConfig.js",
+        "test-google-ai": "node test-google-ai.js"
     },
     "keywords": [
         "notes",
