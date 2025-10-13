@@ -19,6 +19,10 @@
     ],
     "author": "",
     "license": "MIT",
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=8.0.0"
+    },
     "dependencies": {
         "@google/generative-ai": "^0.24.1",
         "axios": "^1.12.2",
@@ -34,7 +38,7 @@
         "mammoth": "^1.10.0",
         "mongoose": "^8.0.0",
         "multer": "^1.4.5-lts.1",
-        "nodemailer": "^6.9.5",
+        "nodemailer": "^7.0.9",
         "openai": "^6.1.0",
         "pdf-parse": "^2.2.6",
         "socket.io": "^4.7.2",
