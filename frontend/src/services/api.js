@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 
 // Create axios instance with base configuration
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'https://campus-share-2.onrender.com/api',
+    baseURL: import.meta.env.VITE_API_URL || 'https://campus-share.onrender.com/api',
     timeout: 60000, // Increased timeout for file uploads
     headers: {
         'Content-Type': 'application/json',

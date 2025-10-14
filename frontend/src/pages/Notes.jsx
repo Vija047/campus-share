@@ -140,7 +140,7 @@ const Notes = () => {
                 if (downloadUrl.startsWith('/uploads/')) {
                     cleanDownloadUrl = `${window.location.protocol}//${window.location.host}:5000${downloadUrl}`;
                 } else if (!downloadUrl.startsWith('http')) {
-                    cleanDownloadUrl = `https://campus-share-2.onrender.com${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+                    cleanDownloadUrl = `https://campus-share.onrender.com${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
                 }
             }
 
@@ -304,7 +304,7 @@ const Notes = () => {
                     if (viewUrl.startsWith('/uploads/')) {
                         cleanViewUrl = `${window.location.protocol}//${window.location.host}:5000${viewUrl}`;
                     } else if (!viewUrl.startsWith('http')) {
-                        cleanViewUrl = `https://campus-share-2.onrender.com${viewUrl.startsWith('/') ? '' : '/'}${viewUrl}`;
+                        cleanViewUrl = `https://campus-share.onrender.com${viewUrl.startsWith('/') ? '' : '/'}${viewUrl}`;
                     }
                 }
 
@@ -362,7 +362,7 @@ const Notes = () => {
                         if (downloadUrl.startsWith('/uploads/')) {
                             cleanFallbackUrl = `${window.location.protocol}//${window.location.host}:5000${downloadUrl}`;
                         } else if (!downloadUrl.startsWith('http')) {
-                            cleanFallbackUrl = `https://campus-share-2.onrender.com${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+                            cleanFallbackUrl = `https://campus-share.onrender.com${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
                         }
                     }
 
