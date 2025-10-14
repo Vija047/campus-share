@@ -33,7 +33,7 @@ const app = express();
 const server = createServer(app);
 
 const allowedOrigins = [
-  'https://campus-share-blush.vercel.app'
+  'https://campus-share-almadsrr6-vijays-projects-f9983762.vercel.app'
 ];
 
 // Security & CORS
