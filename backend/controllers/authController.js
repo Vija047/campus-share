@@ -16,28 +16,27 @@ export const register = async (req, res) => {
     try {
         const { name, email, password, semester, department, gender } = req.body;
 
-        // Basic email format validation - only local validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        // Validate required fields
+        if (!name || !email || !password || !semester || !department || !gender) {
             return res.status(400).json({
                 success: false,
-                message: 'Please enter a valid email address'
+                message: 'All fields are required'
             });
         }
 
-        // Check if user exists in database - only database check, no external validation
+        // Check if user already exists
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: 'User already exists with this email'
+                message: 'User with this email already exists'
             });
         }
 
         // Generate verification code
         const verificationCode = crypto.randomInt(100000, 999999).toString();
 
-        // Create user with verification code
+        // Create user directly
         const user = await User.create({
             name,
             email: email.toLowerCase(),
@@ -49,13 +48,12 @@ export const register = async (req, res) => {
             emailVerificationExpires: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
         });
 
-        // Send verification email (don't wait for it)
+        // Send verification email (non-blocking)
         try {
             await sendEmailVerificationCode(user, verificationCode);
             console.log('Verification email sent successfully');
         } catch (err) {
             console.error('Verification email failed:', err);
-            // Continue with registration even if email fails
         }
 
         res.status(201).json({
@@ -71,12 +69,6 @@ export const register = async (req, res) => {
         });
     } catch (error) {
         console.error('Registration error:', error);
-        if (error.code === 11000) {
-            return res.status(400).json({
-                success: false,
-                message: 'User already exists with this email'
-            });
-        }
         res.status(500).json({
             success: false,
             message: 'Registration failed',
@@ -93,14 +85,14 @@ export const login = async (req, res) => {
         const { email, password } = req.body;
         const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
 
-        // Check if user exists and select password and account lock fields
+        // ✅ Only check if the email exists in the database
         const user = await User.findOne({ email: email.toLowerCase() })
             .select('+password +failedLoginAttempts +accountLockedUntil');
 
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: 'Invalid credentials'
+                message: 'Email not found. Please register first.'
             });
         }
 
@@ -134,19 +126,14 @@ export const login = async (req, res) => {
             });
         }
 
-
-
         // Check password
         const isPasswordCorrect = await user.comparePassword(password);
         if (!isPasswordCorrect) {
             await user.incLoginAttempts();
 
-            // Check if account should be locked after this attempt
             const updatedUser = await User.findById(user._id).select('+failedLoginAttempts +accountLockedUntil');
             if (updatedUser.isLocked) {
-                // Send account locked email
                 sendAccountLockedEmail(user).catch(err => console.error('Account locked email failed:', err));
-
                 return res.status(423).json({
                     success: false,
                     message: 'Too many failed login attempts. Your account has been temporarily locked for 2 hours.',
@@ -293,8 +280,6 @@ export const updateProfile = async (req, res) => {
     }
 };
 
-
-
 // @desc    Forgot password - Send OTP
 // @route   POST /api/auth/forgot-password
 // @access  Public
@@ -303,28 +288,20 @@ export const forgotPassword = async (req, res) => {
         const { email } = req.body;
         const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
 
-        // Find user by email
         const user = await User.findOne({ email: email.toLowerCase() });
         if (!user) {
-            // Don't reveal if email exists or not for security
             return res.status(200).json({
                 success: true,
                 message: 'If an account with this email exists, you will receive a password reset OTP shortly.'
             });
         }
 
-
-
-        // Generate secure 6-digit OTP
         const otp = crypto.randomInt(100000, 999999).toString();
-
-        // Set OTP, expiration and mark as unused (10 minutes)
-        user.resetOTP = crypto.createHash('sha256').update(otp).digest('hex'); // Hash the OTP for storage
-        user.resetOTPExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        user.resetOTP = crypto.createHash('sha256').update(otp).digest('hex');
+        user.resetOTPExpires = Date.now() + 10 * 60 * 1000;
         user.resetOTPUsed = false;
         await user.save();
 
-        // Send OTP email with IP address for security
         await sendOTPEmail(user, otp, ipAddress);
 
         res.status(200).json({
@@ -348,10 +325,8 @@ export const verifyOTP = async (req, res) => {
     try {
         const { email, otp } = req.body;
 
-        // Hash the provided OTP to compare with stored hash
         const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
 
-        // Find user with valid OTP
         const user = await User.findOne({
             email: email.toLowerCase(),
             resetOTP: hashedOTP,
@@ -388,10 +363,8 @@ export const resetPassword = async (req, res) => {
         const { email, otp, newPassword } = req.body;
         const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
 
-        // Hash the provided OTP to compare with stored hash
         const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
 
-        // Find user with valid OTP
         const user = await User.findOne({
             email: email.toLowerCase(),
             resetOTP: hashedOTP,
@@ -406,23 +379,18 @@ export const resetPassword = async (req, res) => {
             });
         }
 
-        // Mark OTP as used to prevent reuse
         user.resetOTPUsed = true;
         await user.save();
 
-        // Update password and clear OTP fields
         user.password = newPassword;
         user.resetOTP = undefined;
         user.resetOTPExpires = undefined;
         user.resetOTPUsed = undefined;
-
-        // Reset any failed login attempts
         user.failedLoginAttempts = 0;
         user.accountLockedUntil = undefined;
 
         await user.save();
 
-        // Send password reset success email
         sendPasswordResetSuccessEmail(user, ipAddress).catch(err =>
             console.error('Password reset success email failed:', err)
         );
@@ -455,7 +423,6 @@ export const verifyEmail = async (req, res) => {
             });
         }
 
-        // Find user with verification code
         const user = await User.findOne({
             email: email.toLowerCase(),
             emailVerificationCode: verificationCode
@@ -468,7 +435,6 @@ export const verifyEmail = async (req, res) => {
             });
         }
 
-        // Check if code has expired
         if (user.emailVerificationExpires < new Date()) {
             return res.status(400).json({
                 success: false,
@@ -476,13 +442,11 @@ export const verifyEmail = async (req, res) => {
             });
         }
 
-        // Verify email
         user.isEmailVerified = true;
         user.emailVerificationCode = undefined;
         user.emailVerificationExpires = undefined;
         await user.save();
 
-        // Send welcome email (don't wait for it)
         try {
             await sendWelcomeEmail(user);
             console.log('Welcome email sent successfully');
@@ -490,28 +454,13 @@ export const verifyEmail = async (req, res) => {
             console.error('Welcome email failed:', err);
         }
 
-        // Generate token for login
         const token = generateToken(user._id);
 
         res.status(200).json({
             success: true,
-            message: 'Email verified successfully! Welcome to Student Notes Hub.',
+            message: 'Email verified successfully!',
             data: {
-                user: {
-                    id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    semester: user.semester,
-                    department: user.department,
-                    gender: user.gender,
-                    role: user.role,
-                    profilePicture: user.profilePicture,
-                    bio: user.bio,
-                    notesUploaded: user.notesUploaded,
-                    likesReceived: user.likesReceived,
-                    isEmailVerified: user.isEmailVerified,
-                    createdAt: user.createdAt
-                },
+                user,
                 token
             }
         });
@@ -539,7 +488,6 @@ export const resendVerificationCode = async (req, res) => {
             });
         }
 
-        // Find user
         const user = await User.findOne({
             email: email.toLowerCase(),
             isEmailVerified: false
@@ -552,14 +500,11 @@ export const resendVerificationCode = async (req, res) => {
             });
         }
 
-        // Generate new verification code
         const verificationCode = crypto.randomInt(100000, 999999).toString();
-
         user.emailVerificationCode = verificationCode;
-        user.emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        user.emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000);
         await user.save();
 
-        // Send verification email (don't wait for it)
         try {
             await sendEmailVerificationCode(user, verificationCode);
             console.log('Verification email resent successfully');

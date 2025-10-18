@@ -11,8 +11,8 @@ class SocketService {
             return;
         }
 
-        // Use production URL for deployment, localhost for development
-        const socketUrl = import.meta.env.VITE_SOCKET_URL || 'https://campus-share.onrender.com';
+        // Use environment variable for socket URL, fallback to localhost for development
+        const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
         try {
             this.socket = io(socketUrl, {

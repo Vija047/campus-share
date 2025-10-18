@@ -33,7 +33,8 @@ const app = express();
 const server = createServer(app);
 
 const allowedOrigins = [
-  'https://campus-share-ten.vercel.app'
+  'https://campus-share-ten.vercel.app',
+  'http://localhost:3000'
 ];
 
 // Security & CORS

@@ -6,7 +6,7 @@ import Chat from '../models/Chat.js';
 let io;
 
 // You can define allowed origins here directly
-const allowedOrigins = ['http://localhost:3000']; // Add more if needed
+const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001']; // Add more if needed
 
 export const initializeSocket = (server) => {
   io = new Server(server, {
