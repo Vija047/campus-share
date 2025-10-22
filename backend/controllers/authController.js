@@ -9,6 +9,21 @@ import {
 } from '../utils/email.js';
 import crypto from 'crypto';
 
+// Helper function to clean up expired unverified users
+const cleanupExpiredUnverifiedUsers = async () => {
+    try {
+        const expiredUsers = await User.deleteMany({
+            isEmailVerified: false,
+            emailVerificationExpires: { $lt: new Date() }
+        });
+        if (expiredUsers.deletedCount > 0) {
+            console.log(`Cleaned up ${expiredUsers.deletedCount} expired unverified users`);
+        }
+    } catch (error) {
+        console.error('Error cleaning up expired users:', error);
+    }
+};
+
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
@@ -24,13 +39,56 @@ export const register = async (req, res) => {
             });
         }
 
+        // Clean up expired unverified users (non-blocking)
+        cleanupExpiredUnverifiedUsers().catch(err =>
+            console.error('Cleanup failed:', err)
+        );
+
         // Check if user already exists
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                message: 'User with this email already exists'
-            });
+            // If user exists but email is not verified, allow re-registration by updating the existing user
+            if (!existingUser.isEmailVerified) {
+                // Generate new verification code
+                const verificationCode = crypto.randomInt(100000, 999999).toString();
+
+                // Update existing user with new details
+                existingUser.name = name;
+                existingUser.password = password; // This will be hashed by the pre-save middleware
+                existingUser.semester = semester;
+                existingUser.department = department;
+                existingUser.gender = gender;
+                existingUser.emailVerificationCode = verificationCode;
+                existingUser.emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000);
+
+                await existingUser.save();
+
+                // Send verification email (non-blocking)
+                try {
+                    await sendEmailVerificationCode(existingUser, verificationCode);
+                    console.log('Verification email sent successfully');
+                } catch (err) {
+                    console.error('Verification email failed:', err);
+                }
+
+                return res.status(201).json({
+                    success: true,
+                    message: 'Registration updated! Please check your email for the verification code.',
+                    data: {
+                        user: {
+                            id: existingUser._id,
+                            email: existingUser.email,
+                            isEmailVerified: existingUser.isEmailVerified
+                        }
+                    }
+                });
+            } else {
+                // User exists and is verified
+                return res.status(400).json({
+                    success: false,
+                    message: 'User with this email already exists and is verified. Please login instead.'
+                });
+            }
         }
 
         // Generate verification code

@@ -583,7 +583,7 @@ const Dashboard = () => {
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Recent Activity / Trending Notes */}
-                    <div className="lg:col-span-2">
+                    <div className="col-span-1 lg:col-span-2">
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
                             <div className="p-6 border-b border-gray-100">
                                 <div className="flex items-center justify-between">
@@ -708,8 +708,8 @@ const Dashboard = () => {
                         </div>
                     </div>
 
-                    {/* Sidebar - Profile & Actions */}
-                    <div className="space-y-6">
+                    {/* Sidebar - Profile & Actions - Hidden on Mobile */}
+                    <div className="hidden lg:block space-y-6">
                         {/* Profile Summary */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <div className="flex items-center mb-4">

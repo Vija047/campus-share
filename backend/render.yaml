@@ -3,8 +3,8 @@ services:
     name: campus-share-backend
     runtime: node
     plan: free
-    rootDir: ./backend
-    buildCommand: npm ci
+    rootDir: ./
+    buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -12,21 +12,31 @@ services:
         value: production
       - key: PORT
         value: 10000
-    # Add your environment variables here
-    # Example:
-    # - key: MONGODB_URI
-    #   fromDatabase:
-    #     name: your-mongodb-database
-    #     property: connectionString
-    # - key: JWT_SECRET
-    #   generateValue: true
-    # - key: CLOUDINARY_CLOUD_NAME
-    #   sync: false
-    # - key: CLOUDINARY_API_KEY
-    #   sync: false
-    # - key: CLOUDINARY_API_SECRET
-    #   sync: false
-    # - key: EMAIL_USER
-    #   sync: false
-    # - key: EMAIL_PASS
-    #   sync: false
+      # Database
+      - key: MONGODB_URI
+        sync: false
+      # Authentication
+      - key: JWT_SECRET
+        generateValue: true
+      # File Storage (Cloudinary)
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # Email Configuration
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      # AI Service
+      - key: GOOGLE_AI_API_KEY
+        sync: false
+      # Frontend URL for CORS
+      - key: FRONTEND_URL
+        value: "https://campus-share-frontend.onrender.com"

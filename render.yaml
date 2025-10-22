@@ -1,10 +1,11 @@
 services:
+  # Backend API Service
   - type: web
     name: campus-share-backend
     runtime: node
     plan: free
     rootDir: ./backend
-    buildCommand: npm install --production=false && npm run test-google-ai
+    buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -12,21 +13,38 @@ services:
         value: production
       - key: PORT
         value: 10000
-    # Add your environment variables here
-    # Example:
-    # - key: MONGODB_URI
-    #   fromDatabase:
-    #     name: your-mongodb-database
-    #     property: connectionString
-    # - key: JWT_SECRET
-    #   generateValue: true
-    # - key: CLOUDINARY_CLOUD_NAME
-    #   sync: false
-    # - key: CLOUDINARY_API_KEY
-    #   sync: false
-    # - key: CLOUDINARY_API_SECRET
-    #   sync: false
-    # - key: EMAIL_USER
-    #   sync: false
-    # - key: EMAIL_PASS
-    #   sync: false
+      # Add your actual environment variables here
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: EMAIL_HOST
+        sync: false
+      - key: EMAIL_PORT
+        sync: false
+      - key: GOOGLE_AI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: "https://campus-share-frontend.onrender.com"
+
+  # Frontend Static Site
+  - type: static
+    name: campus-share-frontend
+    buildCommand: "npm install && npm run build"
+    publishDirectory: "dist"
+    rootDir: ./frontend
+    envVars:
+      - key: VITE_API_URL
+        value: "https://campus-share-backend.onrender.com/api"
+      - key: VITE_SOCKET_URL
+        value: "https://campus-share-backend.onrender.com"
