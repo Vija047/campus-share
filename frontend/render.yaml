@@ -5,6 +5,7 @@ services:
     env: static
     buildCommand: "npm install && npm run build"
     publishDirectory: "dist"
+    staticPublishPath: "./dist"
     rootDir: ./frontend
     envVars:
       - key: VITE_API_URL
