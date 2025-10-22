@@ -33,7 +33,7 @@ const app = express();
 const server = createServer(app);
 
 const allowedOrigins = [
-  'https://campus-share-delta.vercel.app',
+  'https://campus-share-2.onrender.com',
   'http://localhost:3000'
 ];
 
