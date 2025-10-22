@@ -8,6 +8,10 @@ services:
     staticPublishPath: "./dist"
     rootDir: ./frontend
     envVars:
+      - key: NODE_ENV
+        value: "production"
+      - key: VITE_NODE_ENV
+        value: "production"
       - key: VITE_API_URL
         value: "https://campus-share-backend.onrender.com/api"
       - key: VITE_SOCKET_URL
