@@ -39,6 +39,23 @@ export const register = async (req, res) => {
             });
         }
 
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a valid email address'
+            });
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 6 characters long'
+            });
+        }
+
         // Clean up expired unverified users (non-blocking)
         cleanupExpiredUnverifiedUsers().catch(err =>
             console.error('Cleanup failed:', err)

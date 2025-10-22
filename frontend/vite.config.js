@@ -29,7 +29,10 @@ export default defineConfig({
       compress: {
         drop_console: true,
         drop_debugger: true,
+        dead_code: true,
+        unused: true,
       },
+      mangle: true,
     },
     rollupOptions: {
       output: {
@@ -42,6 +45,11 @@ export default defineConfig({
     },
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    __DEV__: false,
+  },
+  esbuild: {
+    drop: ['console', 'debugger'],
+    pure: ['console.log'],
   },
 })

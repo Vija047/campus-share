@@ -74,6 +74,17 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Rate limiter
 app.use(generalLimiter);
 
+// Database connectivity check middleware for API routes
+app.use('/api', (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection unavailable. Please try again later.'
+    });
+  }
+  next();
+});
+
 // ------------------- Routes -------------------
 app.use('/api/notifications', notificationRoutes); // No rate limiter
 app.use('/api/auth', authRoutes);
@@ -97,7 +108,15 @@ app.get('/uploads/:filename', async (req, res) => {
 
 // Health & Root
 app.get('/', (req, res) => res.send('🚀 Server started successfully'));
-app.get('/health', (req, res) => res.json({ status: 'OK', uptime: process.uptime() }));
+app.get('/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({
+    status: 'OK',
+    uptime: process.uptime(),
+    database: dbStatus,
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 app.get('/api/test', (req, res) => res.json({ success: true, message: 'Backend is connected' }));
 
 // 404 & Error
@@ -107,14 +126,23 @@ app.use(errorHandler);
 // ------------------- Database -------------------
 const connectDB = async () => {
   if (!process.env.MONGODB_URI) {
-    console.warn('⚠️ MongoDB URI not found, skipping DB connection');
-    return;
+    console.warn('⚠️ MongoDB URI not found in environment variables');
+    console.warn('Please set MONGODB_URI in your environment or .env file');
+    // Don't exit in production, just log warning
+    return null;
   }
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    return conn;
   } catch (err) {
-    console.error('MongoDB connection error:', err);
+    console.error('MongoDB connection error:', err.message);
+    // Don't exit in production, return null and continue
+    return null;
   }
 };
 

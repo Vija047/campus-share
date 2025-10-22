@@ -40,8 +40,16 @@ api.interceptors.response.use(
 
         // Handle network errors
         if (!error.response) {
-            console.error('Network error or server not responding');
-            toast.error('Network error. Please check your connection and try again.');
+            if (error.code === 'ECONNABORTED') {
+                console.error('Request timeout');
+                toast.error('Request timeout. Please try again.');
+            } else if (error.code === 'ERR_NETWORK') {
+                console.error('Network error or server not responding');
+                toast.error('Network error. Please check your connection and try again.');
+            } else {
+                console.error('Network error or server not responding');
+                toast.error('Unable to connect to server. Please try again later.');
+            }
             return Promise.reject(error);
         }
 
@@ -52,8 +60,10 @@ api.interceptors.response.use(
             // Unauthorized - remove token and redirect to login
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
-            toast.error('Session expired. Please login again.');
+            if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+                toast.error('Session expired. Please login again.');
+            }
         } else if (error.response?.status === 403) {
             toast.error('Access denied.');
         } else if (error.response?.status === 404) {
