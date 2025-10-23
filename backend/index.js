@@ -36,7 +36,7 @@ const server = createServer(app);
 const getAllowedOrigins = () => {
   const envOrigins = process.env.ALLOWED_ORIGINS;
   const defaultOrigins = [
-    'https://campus-share-3roznuw8c-vijays-projects-f9983762.vercel.app',
+    'https://campus-share-six.vercel.app',
     'http://localhost:3000'
   ];
 
