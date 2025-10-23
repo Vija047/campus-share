@@ -5,47 +5,56 @@ services:
     runtime: node
     plan: free
     rootDir: ./backend
-    buildCommand: npm install
+    buildCommand: npm ci --only=production
     startCommand: npm start
     healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      # Add your actual environment variables here
+      # Database
       - key: MONGODB_URI
         sync: false
+      # Authentication
       - key: JWT_SECRET
         generateValue: true
+      # File Storage (Cloudinary)
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      # Email Configuration
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS
         sync: false
       - key: EMAIL_HOST
-        sync: false
+        value: smtp.gmail.com
       - key: EMAIL_PORT
-        sync: false
+        value: 587
+      # AI Service
       - key: GOOGLE_AI_API_KEY
         sync: false
+      # Frontend URL for CORS
       - key: FRONTEND_URL
         value: "https://campus-share-frontend.onrender.com"
+      # Additional environment variables
+      - key: ALLOWED_ORIGINS
+        value: "https://campus-share-frontend.onrender.com,http://localhost:3000,http://localhost:5173"
 
   # Frontend Static Site
   - type: static
     name: campus-share-frontend
-    buildCommand: "npm install && npm run build"
+    buildCommand: "npm ci && npm run build"
     publishDirectory: "dist"
     staticPublishPath: "./dist"
     rootDir: ./frontend
     envVars:
       - key: VITE_API_URL
-        value: "https://campus-share-backend.onrender.com/api"
+        value: "https://campus-share-backend.onrender.com"
       - key: VITE_SOCKET_URL
         value: "https://campus-share-backend.onrender.com"

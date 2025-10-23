@@ -4,9 +4,10 @@ services:
     runtime: node
     plan: free
     rootDir: ./
-    buildCommand: npm install
+    buildCommand: npm ci --only=production
     startCommand: npm start
     healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
@@ -31,12 +32,15 @@ services:
       - key: EMAIL_PASS
         sync: false
       - key: EMAIL_HOST
-        sync: false
+        value: smtp.gmail.com
       - key: EMAIL_PORT
-        sync: false
+        value: 587
       # AI Service
       - key: GOOGLE_AI_API_KEY
         sync: false
       # Frontend URL for CORS
       - key: FRONTEND_URL
-        value: "https://campus-share-frontend.onrender.com"
+        value: "https://campus-share-frontend.vercel.app"
+      # Additional environment variables
+      - key: ALLOWED_ORIGINS
+        value: "https://campus-share-frontend.vercel.app,http://localhost:3000,http://localhost:5173"

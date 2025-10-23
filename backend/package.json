@@ -11,7 +11,9 @@
         "test": "echo \"Error: no test specified\" && exit 1",
         "test-email": "node scripts/testEmailConfig.js",
         "test-google-ai": "node test-google-ai.js",
-        "cleanup-users": "node scripts/cleanupExpiredUsers.js"
+        "cleanup-users": "node scripts/cleanupExpiredUsers.js",
+        "verify-deployment": "node scripts/verifyDeployment.js",
+        "postinstall": "echo 'Backend dependencies installed successfully'"
     },
     "keywords": [
         "notes",

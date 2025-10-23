@@ -1,37 +1,16 @@
 {
     "version": 2,
     "name": "campus-share-frontend",
-    "builds": [
-        {
-            "src": "package.json",
-            "use": "@vercel/static-build",
-            "config": {
-                "distDir": "dist"
-            }
-        }
-    ],
-    "routes": [
-        {
-            "handle": "filesystem"
-        },
-        {
-            "src": "/.*",
-            "dest": "/index.html"
-        }
-    ],
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
     "installCommand": "npm install",
     "framework": "vite",
-    "env": {
-        "VITE_API_URL": "@vite_api_url",
-        "VITE_SOCKET_URL": "@vite_socket_url"
-    },
-    "functions": {
-        "app/**": {
-            "includeFiles": "dist/**"
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
-    },
+    ],
     "headers": [
         {
             "source": "/(.*)",

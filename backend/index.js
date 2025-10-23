@@ -32,10 +32,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = createServer(app);
 
-const allowedOrigins = [
-  'https://campus-share-2.onrender.com',
-  'http://localhost:3000'
-];
+// Get allowed origins from environment or use defaults
+const getAllowedOrigins = () => {
+  const envOrigins = process.env.ALLOWED_ORIGINS;
+  const defaultOrigins = [
+    'https://campus-share-frontend.vercel.app',
+    'https://campus-share-frontend.onrender.com',
+    'https://campus-share-2.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ];
+
+  if (envOrigins) {
+    return [...defaultOrigins, ...envOrigins.split(',').map(origin => origin.trim())];
+  }
+  return defaultOrigins;
+};
+
+const allowedOrigins = getAllowedOrigins();
 
 // Security & CORS
 app.set('trust proxy', 1);
@@ -58,12 +72,12 @@ app.use(cors({
       return cb(null, true);
     }
 
-    console.warn('CORS blocked origin:', origin);
+    console.warn('CORS blocked origin:', origin, 'Allowed origins:', allowedOrigins);
     return cb(new Error('Not allowed by CORS'), false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with'],
   maxAge: 86400 // 24 hours
 }));
 
