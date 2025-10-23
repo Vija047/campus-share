@@ -6,7 +6,7 @@ import Chat from '../models/Chat.js';
 let io;
 
 // You can define allowed origins here directly
-const allowedOrigins = ['https://campus-share-2.onrender.com', 'http://localhost:3000']; // Add more if needed
+const allowedOrigins = ['https://campus-share-3roznuw8c-vijays-projects-f9983762.vercel.app', 'http://localhost:3000']; // Add more if needed
 
 export const initializeSocket = (server) => {
   io = new Server(server, {
