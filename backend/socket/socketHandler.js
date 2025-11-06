@@ -6,31 +6,59 @@ import Chat from '../models/Chat.js';
 let io;
 
 // You can define allowed origins here directly
-const allowedOrigins = ['https://campus-share-six.vercel.app', 'http://localhost:3000']; // Add more if needed
+const allowedOrigins = [
+  'https://campus-share-six.vercel.app',
+  'http://localhost:3000'
+]; // Add more if needed
 
 export const initializeSocket = (server) => {
   io = new Server(server, {
-    cors: { origin: allowedOrigins, methods: ['GET', 'POST'], credentials: true }
+    cors: {
+      origin: allowedOrigins,
+      methods: ['GET', 'POST'],
+      credentials: true,
+      allowedHeaders: ['Authorization']
+    },
+    transports: ['websocket', 'polling'],
+    pingTimeout: 60000,
+    pingInterval: 25000
   });
 
   // Authenticate socket connections
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth.token;
-      if (!token) return next(new Error('Authentication error'));
+      if (!token) {
+        console.log('Socket connection rejected: No token provided');
+        return next(new Error('Authentication error: No token provided'));
+      }
+
+      if (!process.env.JWT_SECRET) {
+        console.error('JWT_SECRET not found in environment');
+        return next(new Error('Server configuration error'));
+      }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.id).select('-password');
-      if (!user || !user.isActive) return next(new Error('Authentication error'));
+      if (!user) {
+        console.log('Socket connection rejected: User not found');
+        return next(new Error('Authentication error: User not found'));
+      }
+      if (!user.isActive) {
+        console.log('Socket connection rejected: User inactive');
+        return next(new Error('Authentication error: User inactive'));
+      }
 
       socket.user = {
         id: user._id.toString(),
         name: user.name,
         semester: user.semester
       };
+      console.log(`Socket authentication successful for user: ${user.name}`);
       next();
-    } catch {
-      next(new Error('Authentication error'));
+    } catch (error) {
+      console.error('Socket authentication error:', error.message);
+      next(new Error('Authentication error: ' + error.message));
     }
   });
 
