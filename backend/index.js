@@ -117,6 +117,35 @@ app.get('/uploads/:filename', async (req, res) => {
   }
 });
 
+// Handle favicon requests
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end(); // No content
+});
+
+// Handle robots.txt requests
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.send('User-agent: *\nDisallow: /api/\nDisallow: /uploads/');
+});
+
+// Base API route
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Campus Share API is running',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      notes: '/api/notes',
+      posts: '/api/posts',
+      chat: '/api/chat',
+      stats: '/api/stats',
+      notifications: '/api/notifications',
+      chatbot: '/api/chatbot'
+    }
+  });
+});
+
 // Health & Root
 app.get('/', (req, res) => res.send('🚀 Server started successfully'));
 app.get('/health', (req, res) => {
@@ -144,9 +173,15 @@ const connectDB = async () => {
   }
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+      maxPoolSize: parseInt(process.env.DB_MAX_POOL_SIZE) || 10,
+      serverSelectionTimeoutMS: parseInt(process.env.DB_SERVER_SELECTION_TIMEOUT) || 5000,
+      socketTimeoutMS: parseInt(process.env.DB_SOCKET_TIMEOUT) || 45000,
+      // Additional options for better reliability
+      retryWrites: true,
+      w: 'majority',
+      connectTimeoutMS: 10000, // 10 seconds
+      heartbeatFrequencyMS: 10000, // 10 seconds
+      maxIdleTimeMS: 30000, // 30 seconds
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn;

@@ -10,7 +10,7 @@ const createTransporter = () => {
     throw new Error(`Missing required email environment variables: ${missingVars.join(', ')}`);
   }
 
-  return nodemailer.createTransport({
+  return nodemailer.createTransporter({
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT),
     secure: false, // true for 465, false for other ports
@@ -18,10 +18,20 @@ const createTransporter = () => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    // Add connection timeout
-    connectionTimeout: 60000,
-    greetingTimeout: 30000,
-    socketTimeout: 60000,
+    // Add improved timeout settings from environment or defaults
+    connectionTimeout: parseInt(process.env.EMAIL_CONNECTION_TIMEOUT) || 30000, // 30 seconds
+    greetingTimeout: 20000, // 20 seconds
+    socketTimeout: parseInt(process.env.EMAIL_SOCKET_TIMEOUT) || 30000, // 30 seconds
+    // Add additional options for better reliability
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
+    rateLimit: 10, // Max 10 emails per second
+    // Retry configuration
+    retry: {
+      attempts: 3,
+      delay: 1000
+    }
   });
 };
 
@@ -35,6 +45,14 @@ export const sendEmail = async (options) => {
 
     const transporter = createTransporter();
 
+    // Verify connection before sending
+    try {
+      await transporter.verify();
+    } catch (verifyError) {
+      console.error('SMTP connection verification failed:', verifyError.message);
+      return { messageId: 'smtp-verify-failed', error: verifyError.message };
+    }
+
     const mailOptions = {
       from: `Student Notes Hub <${process.env.EMAIL_USER}>`,
       to: options.to,
@@ -43,13 +61,23 @@ export const sendEmail = async (options) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent: ' + info.messageId);
+    console.log('Email sent successfully:', info.messageId);
     return info;
   } catch (error) {
     console.error('Email sending failed:', error);
+
+    // Log specific error types for debugging
+    if (error.code === 'ETIMEDOUT') {
+      console.error('Email timeout - check network connectivity or SMTP settings');
+    } else if (error.code === 'EAUTH') {
+      console.error('Email authentication failed - check credentials');
+    } else if (error.code === 'ECONNREFUSED') {
+      console.error('Email connection refused - check SMTP server and port');
+    }
+
     // Don't throw the error to prevent application crashes
     // Instead, log it and return a failure indicator
-    return { messageId: 'email-failed', error: error.message };
+    return { messageId: 'email-failed', error: error.message, code: error.code };
   }
 };
 

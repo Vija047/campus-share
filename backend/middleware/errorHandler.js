@@ -49,6 +49,14 @@ export const errorHandler = (err, req, res, next) => {
 };
 
 export const notFound = (req, res, next) => {
+    // Don't log common browser requests that aren't actual API errors
+    const ignoredPaths = ['/favicon.ico', '/robots.txt', '/sitemap.xml'];
+    const isIgnoredPath = ignoredPaths.some(path => req.originalUrl.includes(path));
+
+    if (!isIgnoredPath) {
+        console.warn(`Route not found: ${req.method} ${req.originalUrl}`);
+    }
+
     const error = new Error(`Not found - ${req.originalUrl}`);
     res.status(404);
     next(error);
