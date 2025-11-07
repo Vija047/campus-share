@@ -53,7 +53,10 @@ export const notFound = (req, res, next) => {
     const ignoredPaths = ['/favicon.ico', '/robots.txt', '/sitemap.xml'];
     const isIgnoredPath = ignoredPaths.some(path => req.originalUrl.includes(path));
 
-    if (!isIgnoredPath) {
+    // Don't log when someone accesses /api directly (it has a proper response)
+    const isDirectApiAccess = req.originalUrl === '/api';
+
+    if (!isIgnoredPath && !isDirectApiAccess) {
         console.warn(`Route not found: ${req.method} ${req.originalUrl}`);
     }
 

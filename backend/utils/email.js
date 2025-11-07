@@ -10,28 +10,31 @@ const createTransporter = () => {
     throw new Error(`Missing required email environment variables: ${missingVars.join(', ')}`);
   }
 
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT),
-    secure: false, // true for 465, false for other ports
+    secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
     // Add improved timeout settings from environment or defaults
-    connectionTimeout: parseInt(process.env.EMAIL_CONNECTION_TIMEOUT) || 30000, // 30 seconds
-    greetingTimeout: 20000, // 20 seconds
-    socketTimeout: parseInt(process.env.EMAIL_SOCKET_TIMEOUT) || 30000, // 30 seconds
+    connectionTimeout: parseInt(process.env.EMAIL_CONNECTION_TIMEOUT) || 20000, // 20 seconds
+    greetingTimeout: 15000, // 15 seconds
+    socketTimeout: parseInt(process.env.EMAIL_SOCKET_TIMEOUT) || 20000, // 20 seconds
     // Add additional options for better reliability
     pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
-    rateLimit: 10, // Max 10 emails per second
-    // Retry configuration
-    retry: {
-      attempts: 3,
-      delay: 1000
-    }
+    maxConnections: 3,
+    maxMessages: 50,
+    rateLimit: 5, // Max 5 emails per second
+    // Add TLS options for better compatibility
+    tls: {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3'
+    },
+    // Add debug option for production troubleshooting
+    debug: process.env.NODE_ENV === 'development',
+    logger: process.env.NODE_ENV === 'development'
   });
 };
 
@@ -394,7 +397,7 @@ export const sendEmailVerificationCode = async (user, verificationCode) => {
     </div>
   `;
 
-  await sendEmail({
+  return await sendEmail({
     to: user.email,
     subject: '📧 Verify Your Email - Student Notes Hub',
     html,

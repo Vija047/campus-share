@@ -82,8 +82,12 @@ export const register = async (req, res) => {
 
                 // Send verification email (non-blocking)
                 try {
-                    await sendEmailVerificationCode(existingUser, verificationCode);
-                    console.log('Verification email sent successfully');
+                    const emailResult = await sendEmailVerificationCode(existingUser, verificationCode);
+                    if (emailResult && !emailResult.error) {
+                        console.log('Verification email sent successfully');
+                    } else {
+                        console.error('Verification email failed:', emailResult?.error || 'Unknown error');
+                    }
                 } catch (err) {
                     console.error('Verification email failed:', err);
                 }
@@ -125,8 +129,12 @@ export const register = async (req, res) => {
 
         // Send verification email (non-blocking)
         try {
-            await sendEmailVerificationCode(user, verificationCode);
-            console.log('Verification email sent successfully');
+            const emailResult = await sendEmailVerificationCode(user, verificationCode);
+            if (emailResult && !emailResult.error) {
+                console.log('Verification email sent successfully');
+            } else {
+                console.error('Verification email failed:', emailResult?.error || 'Unknown error');
+            }
         } catch (err) {
             console.error('Verification email failed:', err);
         }
@@ -581,10 +589,16 @@ export const resendVerificationCode = async (req, res) => {
         await user.save();
 
         try {
-            await sendEmailVerificationCode(user, verificationCode);
-            console.log('Verification email resent successfully');
+            const emailResult = await sendEmailVerificationCode(user, verificationCode);
+            if (emailResult && !emailResult.error) {
+                console.log('Verification email resent successfully');
+            } else {
+                console.error('Verification email failed:', emailResult?.error || 'Unknown error');
+                // Still return success to user since the verification code is saved
+            }
         } catch (err) {
             console.error('Verification email failed:', err);
+            // Still return success to user since the verification code is saved
         }
 
         res.status(200).json({
