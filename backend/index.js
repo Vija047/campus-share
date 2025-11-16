@@ -175,17 +175,37 @@ app.get('/api', (req, res) => {
 });
 
 // Health & Root
-app.get('/', (req, res) => res.send('🚀 Server started successfully'));
+app.get('/', (req, res) => res.send('🚀 Campus Share Server is running'));
 app.get('/health', (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  const uptime = process.uptime();
+  const memoryUsage = process.memoryUsage();
+
   res.json({
     status: 'OK',
-    uptime: process.uptime(),
+    uptime: Math.round(uptime),
+    uptimeFormatted: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
     database: dbStatus,
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+    memory: {
+      used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+      total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+      rss: Math.round(memoryUsage.rss / 1024 / 1024)
+    },
+    timestamp: new Date().toISOString()
   });
 });
-app.get('/api/test', (req, res) => res.json({ success: true, message: 'Backend is connected' }));
+app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({
+    status: 'healthy',
+    database: dbStatus,
+    api: 'online',
+    timestamp: new Date().toISOString()
+  });
+});
+app.get('/api/test', (req, res) => res.json({ success: true, message: 'Backend API is connected', timestamp: new Date().toISOString() }));
 
 // 404 & Error
 app.use(notFound);
