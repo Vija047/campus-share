@@ -1,14 +1,32 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// Determine API base URL based on environment
+const getApiBaseUrl = () => {
+    // Check if we have environment variables set
+    if (import.meta.env.VITE_API_URL) {
+        return `${import.meta.env.VITE_API_URL}/api`;
+    }
+
+    // Fallback logic based on hostname
+    const hostname = window.location.hostname;
+
+    if (hostname.includes('onrender.com') || hostname.includes('campus-share')) {
+        return 'https://campus-share-backend.onrender.com/api';
+    }
+
+    // Local development
+    return 'http://localhost:5000/api';
+};
+
 // Create axios instance with base configuration
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'https://campus-share-cphj.onrender.com/api',
-    timeout: 90000, // Increased timeout for production
+    baseURL: getApiBaseUrl(),
+    timeout: import.meta.env.PROD ? 120000 : 30000, // Longer timeout for production
     headers: {
         'Content-Type': 'application/json',
     },
-    withCredentials: false, // Set to false for CORS in production
+    withCredentials: false,
 });
 
 // Request interceptor to add auth token
@@ -37,26 +55,28 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        console.error('API Error:', error);
+        // Only log errors in development
+        if (import.meta.env.DEV) {
+            console.error('API Error:', error);
+        }
 
         // Handle network errors
         if (!error.response) {
             if (error.code === 'ECONNABORTED') {
-                console.error('Request timeout');
                 toast.error('Request timeout. Server may be busy, please try again.');
-            } else if (error.code === 'ERR_NETWORK') {
-                console.error('Network error or server not responding');
-                toast.error('Unable to connect to server. Please check your connection and try again.');
-            } else if (error.message?.includes('Network Error')) {
-                console.error('Network error detected');
-                toast.error('Network connection issue. Please verify your internet connection.');
+            } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+                // Check if we're in production and suggest alternative
+                const isProduction = window.location.hostname.includes('onrender.com');
+                if (isProduction) {
+                    toast.error('Server connection issue. Please wait a moment and try again.');
+                } else {
+                    toast.error('Unable to connect to server. Please check your connection and try again.');
+                }
             } else {
-                console.error('Connection error:', error.message);
-                toast.error('Unable to connect to server. Please try again later.');
+                toast.error('Connection error. Please try again later.');
             }
             return Promise.reject(error);
         }
-
         const message = error.response?.data?.message || 'Something went wrong';
 
         // Handle specific error cases
@@ -73,7 +93,9 @@ api.interceptors.response.use(
         } else if (error.response?.status === 404) {
             toast.error('Resource not found.');
         } else if (error.response?.status >= 500) {
-            console.error('Server error:', error.response.data);
+            if (import.meta.env.DEV) {
+                console.error('Server error:', error.response.data);
+            }
             toast.error('Server error. Please try again later.');
         } else {
             toast.error(message);
