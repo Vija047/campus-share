@@ -37,7 +37,9 @@ const getAllowedOrigins = () => {
   const envOrigins = process.env.ALLOWED_ORIGINS;
   const defaultOrigins = [
     'https://campus-share-six.vercel.app',
-    'http://localhost:3000'
+    'https://campus-share-delta.vercel.app',
+    'http://localhost:3000',
+    'https://localhost:3000'
   ];
 
   if (envOrigins) {
@@ -69,12 +71,19 @@ app.use(cors({
       return cb(null, true);
     }
 
+    // Additional check for Vercel preview deployments
+    if (origin.includes('vercel.app') && origin.includes('campus-share')) {
+      console.log('Allowing Vercel preview deployment:', origin);
+      return cb(null, true);
+    }
+
     console.warn('CORS blocked origin:', origin, 'Allowed origins:', allowedOrigins);
     return cb(new Error('Not allowed by CORS'), false);
   },
-  credentials: true,
+  credentials: false, // Set to false for production
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200, // For legacy browser support
   maxAge: 86400 // 24 hours
 }));
 
@@ -88,12 +97,31 @@ app.use(generalLimiter);
 // Database connectivity check middleware for API routes
 app.use('/api', (req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
+    console.warn('Database not connected, connection state:', mongoose.connection.readyState);
+    // Try to reconnect if disconnected
+    if (mongoose.connection.readyState === 0) {
+      connectDB().catch(err => console.error('Reconnection failed:', err));
+    }
     return res.status(503).json({
       success: false,
-      message: 'Database connection unavailable. Please try again later.'
+      message: 'Database connection unavailable. Please try again later.',
+      connectionState: mongoose.connection.readyState
     });
   }
   next();
+});
+
+// Add connection event handlers
+mongoose.connection.on('connected', () => {
+  console.log('Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('Mongoose connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('Mongoose disconnected from MongoDB');
 });
 
 // ------------------- Routes -------------------
@@ -164,7 +192,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 // ------------------- Database -------------------
-const connectDB = async () => {
+const connectDB = async (retryCount = 0) => {
   if (!process.env.MONGODB_URI) {
     console.warn('⚠️ MongoDB URI not found in environment variables');
     console.warn('Please set MONGODB_URI in your environment or .env file');
@@ -174,19 +202,30 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       maxPoolSize: parseInt(process.env.DB_MAX_POOL_SIZE) || 10,
-      serverSelectionTimeoutMS: parseInt(process.env.DB_SERVER_SELECTION_TIMEOUT) || 5000,
+      serverSelectionTimeoutMS: parseInt(process.env.DB_SERVER_SELECTION_TIMEOUT) || 10000,
       socketTimeoutMS: parseInt(process.env.DB_SOCKET_TIMEOUT) || 45000,
       // Additional options for better reliability
       retryWrites: true,
       w: 'majority',
-      connectTimeoutMS: 10000, // 10 seconds
+      connectTimeoutMS: 15000, // 15 seconds
       heartbeatFrequencyMS: 10000, // 10 seconds
       maxIdleTimeMS: 30000, // 30 seconds
+      bufferCommands: false,
+      bufferMaxEntries: 0,
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn;
   } catch (err) {
-    console.error('MongoDB connection error:', err.message);
+    console.error(`MongoDB connection error (attempt ${retryCount + 1}):`, err.message);
+
+    // Retry connection up to 3 times with exponential backoff
+    if (retryCount < 3) {
+      const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+      console.log(`Retrying connection in ${delay / 1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return connectDB(retryCount + 1);
+    }
+
     // Don't exit in production, return null and continue
     return null;
   }

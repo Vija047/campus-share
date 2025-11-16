@@ -33,16 +33,16 @@ const Header = () => {
     };
 
     const navigation = [
-        { name: 'Home', href: '/', icon: Home },
-        { name: 'Notes', href: '/notes', icon: BookOpen },
-        { name: 'Community', href: '/community', icon: MessageSquare }
+        { id: 'nav-home', name: 'Home', href: '/', icon: Home },
+        { id: 'nav-notes', name: 'Notes', href: '/notes', icon: BookOpen },
+        { id: 'nav-community', name: 'Community', href: '/community', icon: MessageSquare }
     ];
 
     const authenticatedNavigation = [
-        { name: 'Dashboard', href: '/dashboard', icon: PieChart },
-        { name: 'Upload', href: '/upload', icon: Upload },
-        { name: 'Add', href: '/add', icon: Users },
-        { name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
+        { id: 'nav-dashboard', name: 'Dashboard', href: '/dashboard', icon: PieChart },
+        { id: 'nav-upload', name: 'Upload', href: '/upload', icon: Upload },
+        { id: 'nav-add', name: 'Add', href: '/add', icon: Users },
+        { id: 'nav-bookmarks', name: 'Bookmarks', href: '/bookmarks', icon: Bookmark },
     ];
 
     const isActiveLink = (href) => {
@@ -70,7 +70,7 @@ const Header = () => {
                     <nav className="hidden lg:flex space-x-1">
                         {navigation.map((item) => (
                             <Link
-                                key={item.name}
+                                key={item.id}
                                 to={item.href}
                                 className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActiveLink(item.href)
                                     ? 'bg-blue-50 text-blue-600 shadow-sm'
@@ -84,7 +84,7 @@ const Header = () => {
 
                         {isAuthenticated && authenticatedNavigation.map((item) => (
                             <Link
-                                key={item.name}
+                                key={item.id}
                                 to={item.href}
                                 className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActiveLink(item.href)
                                     ? 'bg-blue-50 text-blue-600 shadow-sm'

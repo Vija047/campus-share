@@ -3,11 +3,12 @@ import toast from 'react-hot-toast';
 
 // Create axios instance with base configuration
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'https://campus-share.onrender.com/api',
-    timeout: 60000, // Increased timeout for file uploads
+    baseURL: import.meta.env.VITE_API_URL || 'https://campus-share-cphj.onrender.com/api',
+    timeout: 90000, // Increased timeout for production
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: false, // Set to false for CORS in production
 });
 
 // Request interceptor to add auth token
@@ -42,12 +43,15 @@ api.interceptors.response.use(
         if (!error.response) {
             if (error.code === 'ECONNABORTED') {
                 console.error('Request timeout');
-                toast.error('Request timeout. Please try again.');
+                toast.error('Request timeout. Server may be busy, please try again.');
             } else if (error.code === 'ERR_NETWORK') {
                 console.error('Network error or server not responding');
-                toast.error('Network error. Please check your connection and try again.');
+                toast.error('Unable to connect to server. Please check your connection and try again.');
+            } else if (error.message?.includes('Network Error')) {
+                console.error('Network error detected');
+                toast.error('Network connection issue. Please verify your internet connection.');
             } else {
-                console.error('Network error or server not responding');
+                console.error('Connection error:', error.message);
                 toast.error('Unable to connect to server. Please try again later.');
             }
             return Promise.reject(error);

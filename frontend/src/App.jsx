@@ -22,94 +22,97 @@ import NotFound from './pages/NotFound';
 // Import components
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 import './App.css';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-50">
 
-          <Layout>
-            <Routes>
+            <Layout>
+              <Routes>
 
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/verify-email" element={<EmailVerification />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/verify-email" element={<EmailVerification />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
 
-              <Route path="/notes" element={<Notes />} />
-
-
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route path="/upload" element={
-                <ProtectedRoute>
-                  <UploadNote />
-                </ProtectedRoute>
-              } />
-              <Route path="/add" element={
-                <ProtectedRoute>
-                  <Add />
-                </ProtectedRoute>
-              } />
-              <Route path="/chat" element={
-                <ProtectedRoute>
-                  <Chat />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              <Route path="/bookmarks" element={
-                <ProtectedRoute>
-                  <Bookmarks />
-                </ProtectedRoute>
-              } />
-              <Route path="/community" element={
-                <ProtectedRoute>
-                  <Community />
-                </ProtectedRoute>
-              } />
+                <Route path="/notes" element={<Notes />} />
 
 
-              <Route path="/404" element={<NotFound />} />
-              <Route path="*" element={<Navigate to="/404" replace />} />
-            </Routes>
-          </Layout>
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/upload" element={
+                  <ProtectedRoute>
+                    <UploadNote />
+                  </ProtectedRoute>
+                } />
+                <Route path="/add" element={
+                  <ProtectedRoute>
+                    <Add />
+                  </ProtectedRoute>
+                } />
+                <Route path="/chat" element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/bookmarks" element={
+                  <ProtectedRoute>
+                    <Bookmarks />
+                  </ProtectedRoute>
+                } />
+                <Route path="/community" element={
+                  <ProtectedRoute>
+                    <Community />
+                  </ProtectedRoute>
+                } />
 
 
-          {/* Toast notifications */}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-              success: {
-                iconTheme: {
-                  primary: '#4aed88',
+                <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Routes>
+            </Layout>
+
+
+            {/* Toast notifications */}
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
                 },
-              },
-              error: {
-                iconTheme: {
-                  primary: '#ff6b6b',
+                success: {
+                  iconTheme: {
+                    primary: '#4aed88',
+                  },
                 },
-              },
-            }}
-          />
-        </div>
-      </Router>
-    </AuthProvider>
+                error: {
+                  iconTheme: {
+                    primary: '#ff6b6b',
+                  },
+                },
+              }}
+            />
+          </div>
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

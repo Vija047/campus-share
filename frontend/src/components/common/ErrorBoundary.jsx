@@ -15,6 +15,14 @@ class ErrorBoundary extends React.Component {
         // Log the error to console
         console.error('ErrorBoundary caught an error:', error, errorInfo);
 
+        // Report error to monitoring service if available
+        if (typeof window !== 'undefined' && window.gtag) {
+            window.gtag('event', 'exception', {
+                description: error.toString(),
+                fatal: false
+            });
+        }
+
         this.setState({
             error: error,
             errorInfo: errorInfo

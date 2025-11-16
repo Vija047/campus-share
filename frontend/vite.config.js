@@ -30,9 +30,12 @@ export default defineConfig({
         drop_console: true,
         drop_debugger: true,
         dead_code: true,
-        unused: true,
+        unused: false, // Keep unused code to prevent ID issues
       },
-      mangle: true,
+      mangle: {
+        keep_fnames: true, // Keep function names
+        reserved: ['translate-page', 'save-page'], // Reserve problematic IDs
+      },
     },
     rollupOptions: {
       output: {
@@ -41,6 +44,12 @@ export default defineConfig({
           router: ['react-router-dom'],
           ui: ['@headlessui/react', 'lucide-react'],
         },
+      },
+      external: [],
+      onwarn(warning, warn) {
+        // Suppress 'Module level directives cause errors when bundled' warnings
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
+        warn(warning);
       },
     },
   },
