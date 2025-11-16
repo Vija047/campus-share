@@ -3,7 +3,7 @@ import api from './api.js';
 export const authService = {
     // Register new user
     register: async (userData) => {
-        const response = await api.post('/auth/register', userData);
+        const response = await api.post('/api/auth/register', userData);
         if (response.data.success && response.data.data?.token) {
             localStorage.setItem('token', response.data.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.data.user));
@@ -13,7 +13,7 @@ export const authService = {
 
     // Login user
     login: async (credentials) => {
-        const response = await api.post('/auth/login', credentials);
+        const response = await api.post('/api/auth/login', credentials);
         if (response.data.success) {
             localStorage.setItem('token', response.data.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.data.user));
@@ -29,13 +29,13 @@ export const authService = {
 
     // Get current user
     getCurrentUser: async () => {
-        const response = await api.get('/auth/me');
+        const response = await api.get('/api/auth/me');
         return response.data;
     },
 
     // Update profile
     updateProfile: async (profileData) => {
-        const response = await api.put('/auth/profile', profileData);
+        const response = await api.put('/api/auth/profile', profileData);
         if (response.data.success) {
             localStorage.setItem('user', JSON.stringify(response.data.data.user));
         }
@@ -55,25 +55,25 @@ export const authService = {
 
     // Forgot password - send OTP
     forgotPassword: async (email) => {
-        const response = await api.post('/auth/forgot-password', { email });
+        const response = await api.post('/api/auth/forgot-password', { email });
         return response.data;
     },
 
     // Verify OTP
     verifyOTP: async (email, otp) => {
-        const response = await api.post('/auth/verify-otp', { email, otp });
+        const response = await api.post('/api/auth/verify-otp', { email, otp });
         return response.data;
     },
 
     // Reset password
     resetPassword: async (email, otp, newPassword) => {
-        const response = await api.post('/auth/reset-password', { email, otp, newPassword });
+        const response = await api.post('/api/auth/reset-password', { email, otp, newPassword });
         return response.data;
     },
 
     // Verify email
     verifyEmail: async (email, verificationCode) => {
-        const response = await api.post('/auth/verify-email', { email, verificationCode });
+        const response = await api.post('/api/auth/verify-email', { email, verificationCode });
         if (response.data.success && response.data.data?.token) {
             localStorage.setItem('token', response.data.data.token);
             localStorage.setItem('user', JSON.stringify(response.data.data.user));
@@ -83,7 +83,7 @@ export const authService = {
 
     // Resend verification code
     resendVerificationCode: async (email) => {
-        const response = await api.post('/auth/resend-verification', { email });
+        const response = await api.post('/api/auth/resend-verification', { email });
         return response.data;
     },
 

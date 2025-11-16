@@ -38,7 +38,7 @@ class NotificationService {
         return this.retryRequest(async () => {
             const { page = 1, limit = 20, filter = 'all' } = params;
 
-            const response = await api.get('/notifications', {
+            const response = await api.get('/api/notifications', {
                 params: { page, limit, filter }
             });
 
@@ -49,7 +49,7 @@ class NotificationService {
     // Get notification count summary
     async getNotificationCount() {
         return this.retryRequest(async () => {
-            const response = await api.get('/notifications/count');
+            const response = await api.get('/api/notifications/count');
             return response.data;
         });
     }
@@ -65,7 +65,7 @@ class NotificationService {
     // Mark all notifications as read
     async markAllAsRead() {
         return this.retryRequest(async () => {
-            const response = await api.put('/notifications/mark-all-read');
+            const response = await api.put('/api/notifications/mark-all-read');
             return response.data;
         });
     }
@@ -81,7 +81,7 @@ class NotificationService {
     // Clear all read notifications
     async clearReadNotifications() {
         return this.retryRequest(async () => {
-            const response = await api.delete('/notifications/clear-read');
+            const response = await api.delete('/api/notifications/clear-read');
             return response.data;
         });
     }

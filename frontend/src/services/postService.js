@@ -3,7 +3,7 @@ import api from './api.js';
 export const postService = {
     // Create post
     createPost: async (postData) => {
-        const response = await api.post('/posts', postData);
+        const response = await api.post('/api/posts', postData);
         return response.data;
     },
 

@@ -4,7 +4,7 @@ export const noteService = {
     // Upload note
     uploadNote: async (formData) => {
         console.log('Uploading note via noteService...');
-        const response = await api.post('/notes/upload', formData, {
+        const response = await api.post('/api/notes/upload', formData, {
             timeout: 60000, // 60 seconds for file uploads
         });
         return response.data;

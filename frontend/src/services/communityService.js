@@ -20,7 +20,7 @@ export const communityService = {
 
     // Create new community post
     createCommunityPost: async (postData) => {
-        const response = await api.post('/posts', {
+        const response = await api.post('/api/posts', {
             content: postData.content,
             semester: postData.semester || 'general',
             category: postData.category || 'general',
@@ -85,7 +85,7 @@ export const communityService = {
     // Get community statistics
     getCommunityStats: async () => {
         try {
-            const response = await api.get('/posts/stats');
+            const response = await api.get('/api/posts/stats');
             return response.data;
         } catch (error) {
             // Fallback stats if endpoint doesn't exist

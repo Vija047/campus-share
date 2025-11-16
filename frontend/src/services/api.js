@@ -5,18 +5,18 @@ import toast from 'react-hot-toast';
 const getApiBaseUrl = () => {
     // Check if we have environment variables set
     if (import.meta.env.VITE_API_URL) {
-        return `${import.meta.env.VITE_API_URL}/api`;
+        return import.meta.env.VITE_API_URL;
     }
 
     // Fallback logic based on hostname
     const hostname = window.location.hostname;
 
     if (hostname.includes('onrender.com') || hostname.includes('campus-share')) {
-        return 'https://campus-share-backend.onrender.com/api';
+        return 'https://campus-share-backend.onrender.com';
     }
 
     // Local development
-    return 'http://localhost:5000/api';
+    return 'http://localhost:5000';
 };
 
 // Create axios instance with base configuration

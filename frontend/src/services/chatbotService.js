@@ -7,7 +7,7 @@ export const processFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await api.post('/chatbot/process-file', formData, {
+    const response = await api.post('/api/chatbot/process-file', formData, {
         headers: {
             'Content-Type': 'multipart/form-data'
         }
@@ -20,7 +20,7 @@ export const processFile = async (file) => {
  * Send message to chatbot
  */
 export const sendMessage = async (message, sessionId, topic = null) => {
-    const response = await api.post('/chatbot/chat', {
+    const response = await api.post('/api/chatbot/chat', {
         message,
         sessionId,
         topic
@@ -33,7 +33,7 @@ export const sendMessage = async (message, sessionId, topic = null) => {
  * Get learning resources for a topic
  */
 export const getResources = async (topic, resourceTypes = ['youtube', 'geeksforgeeks', 'mdn', 'w3schools']) => {
-    const response = await api.post('/chatbot/resources', {
+    const response = await api.post('/api/chatbot/resources', {
         topic,
         resourceTypes
     });
