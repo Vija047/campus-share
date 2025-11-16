@@ -35,6 +35,14 @@ services:
         value: smtp.gmail.com
       - key: EMAIL_PORT
         value: 587
+      # Email timeout settings for production
+      - key: EMAIL_CONNECTION_TIMEOUT
+        value: 30000
+      - key: EMAIL_SOCKET_TIMEOUT
+        value: 30000
+      # Optional: Enable email debugging in production if needed
+      - key: EMAIL_DEBUG
+        value: false
       # AI Service
       - key: GOOGLE_AI_API_KEY
         sync: false

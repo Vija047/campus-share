@@ -7,52 +7,97 @@ const createTransporter = () => {
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
   if (missingVars.length > 0) {
+    console.error(`Missing required email environment variables: ${missingVars.join(', ')}`);
     throw new Error(`Missing required email environment variables: ${missingVars.join(', ')}`);
   }
 
-  return nodemailer.createTransport({
+  // Log configuration for debugging (without sensitive data)
+  console.log('Email configuration:', {
     host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT),
-    secure: process.env.EMAIL_PORT === '465', // true for 465, false for other ports
+    port: process.env.EMAIL_PORT,
+    user: process.env.EMAIL_USER?.replace(/(.{2}).*@/, '$1***@'),
+    environment: process.env.NODE_ENV
+  });
+
+  // Determine if we should use secure connection
+  const port = parseInt(process.env.EMAIL_PORT);
+  const isSecure = port === 465;
+
+  const transportConfig = {
+    host: process.env.EMAIL_HOST,
+    port: port,
+    secure: isSecure, // true for 465, false for other ports like 587
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    // Add improved timeout settings from environment or defaults
-    connectionTimeout: parseInt(process.env.EMAIL_CONNECTION_TIMEOUT) || 20000, // 20 seconds
-    greetingTimeout: 15000, // 15 seconds
-    socketTimeout: parseInt(process.env.EMAIL_SOCKET_TIMEOUT) || 20000, // 20 seconds
+    // Add improved timeout settings
+    connectionTimeout: parseInt(process.env.EMAIL_CONNECTION_TIMEOUT) || (process.env.NODE_ENV === 'production' ? 30000 : 20000),
+    greetingTimeout: process.env.NODE_ENV === 'production' ? 20000 : 15000,
+    socketTimeout: parseInt(process.env.EMAIL_SOCKET_TIMEOUT) || (process.env.NODE_ENV === 'production' ? 30000 : 20000),
     // Add additional options for better reliability
     pool: true,
-    maxConnections: 3,
-    maxMessages: 50,
-    rateLimit: 5, // Max 5 emails per second
+    maxConnections: process.env.NODE_ENV === 'production' ? 5 : 3,
+    maxMessages: 100,
+    rateLimit: process.env.NODE_ENV === 'production' ? 10 : 5, // Max emails per second
     // Add TLS options for better compatibility
     tls: {
-      rejectUnauthorized: false,
-      ciphers: 'SSLv3'
+      rejectUnauthorized: process.env.NODE_ENV === 'production',
+      minVersion: 'TLSv1.2',
+      // Add additional TLS options for production
+      ...(process.env.NODE_ENV === 'production' && {
+        servername: process.env.EMAIL_HOST,
+        ciphers: 'ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS'
+      })
     },
     // Add debug option for production troubleshooting
-    debug: process.env.NODE_ENV === 'development',
-    logger: process.env.NODE_ENV === 'development'
-  });
+    debug: process.env.NODE_ENV === 'development' || process.env.EMAIL_DEBUG === 'true',
+    logger: process.env.NODE_ENV === 'development' || process.env.EMAIL_DEBUG === 'true'
+  };
+
+  return nodemailer.createTransport(transportConfig);
 };
 
 export const sendEmail = async (options) => {
   try {
     // Check if email configuration is available
     if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.warn('Email configuration not available. Skipping email send.');
+      const errorMsg = 'Email configuration not available. Missing required environment variables.';
+      console.error(errorMsg);
+
+      // In production, this should be treated as an error, not a skip
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(errorMsg);
+      }
+
       return { messageId: 'email-config-missing', skipped: true };
     }
 
     const transporter = createTransporter();
 
-    // Verify connection before sending
-    try {
-      await transporter.verify();
-    } catch (verifyError) {
-      console.error('SMTP connection verification failed:', verifyError.message);
+    // Verify connection before sending (with retry logic for production)
+    let verifyAttempts = process.env.NODE_ENV === 'production' ? 3 : 1;
+    let verifyError;
+
+    for (let i = 0; i < verifyAttempts; i++) {
+      try {
+        await transporter.verify();
+        verifyError = null;
+        break;
+      } catch (error) {
+        verifyError = error;
+        if (i < verifyAttempts - 1) {
+          console.log(`SMTP verification attempt ${i + 1} failed, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+        }
+      }
+    }
+
+    if (verifyError) {
+      console.error('SMTP connection verification failed after all attempts:', verifyError.message);
+      if (process.env.NODE_ENV === 'production') {
+        throw verifyError; // In production, throw the error instead of returning
+      }
       return { messageId: 'smtp-verify-failed', error: verifyError.message };
     }
 
@@ -61,11 +106,41 @@ export const sendEmail = async (options) => {
       to: options.to,
       subject: options.subject,
       html: options.html,
+      // Add additional options for better deliverability
+      replyTo: process.env.EMAIL_USER,
+      ...(process.env.NODE_ENV === 'production' && {
+        headers: {
+          'X-Priority': '3',
+          'X-Mailer': 'Student Notes Hub',
+        }
+      })
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
-    return info;
+    // Add retry logic for production
+    let sendAttempts = process.env.NODE_ENV === 'production' ? 3 : 1;
+    let sendError;
+
+    for (let i = 0; i < sendAttempts; i++) {
+      try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Email sent successfully:', {
+          messageId: info.messageId,
+          to: options.to,
+          subject: options.subject,
+          attempt: i + 1
+        });
+        return info;
+      } catch (error) {
+        sendError = error;
+        if (i < sendAttempts - 1) {
+          console.log(`Email send attempt ${i + 1} failed, retrying...`, error.message);
+          await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before retry
+        }
+      }
+    }
+
+    // If all attempts failed, throw the error
+    throw sendError;
   } catch (error) {
     console.error('Email sending failed:', error);
 
@@ -76,10 +151,16 @@ export const sendEmail = async (options) => {
       console.error('Email authentication failed - check credentials');
     } else if (error.code === 'ECONNREFUSED') {
       console.error('Email connection refused - check SMTP server and port');
+    } else if (error.code === 'ENOTFOUND') {
+      console.error('Email host not found - check EMAIL_HOST configuration');
     }
 
-    // Don't throw the error to prevent application crashes
-    // Instead, log it and return a failure indicator
+    // In production, throw the error to ensure proper error handling
+    // In development, return a failure indicator to prevent crashes during testing
+    if (process.env.NODE_ENV === 'production') {
+      throw error;
+    }
+
     return { messageId: 'email-failed', error: error.message, code: error.code };
   }
 };

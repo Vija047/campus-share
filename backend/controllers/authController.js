@@ -80,16 +80,49 @@ export const register = async (req, res) => {
 
                 await existingUser.save();
 
-                // Send verification email (non-blocking)
+                // Send verification email (with proper error handling for production)
                 try {
                     const emailResult = await sendEmailVerificationCode(existingUser, verificationCode);
                     if (emailResult && !emailResult.error) {
                         console.log('Verification email sent successfully');
                     } else {
                         console.error('Verification email failed:', emailResult?.error || 'Unknown error');
+
+                        // In production, if email fails, we should still allow registration
+                        // but inform the user about the email issue
+                        if (process.env.NODE_ENV === 'production') {
+                            return res.status(201).json({
+                                success: true,
+                                message: 'Registration updated! However, there was an issue sending the verification email. Please try to resend the verification code.',
+                                emailWarning: true,
+                                data: {
+                                    user: {
+                                        id: existingUser._id,
+                                        email: existingUser.email,
+                                        isEmailVerified: existingUser.isEmailVerified
+                                    }
+                                }
+                            });
+                        }
                     }
                 } catch (err) {
                     console.error('Verification email failed:', err);
+
+                    // In production, if email completely fails, still allow registration
+                    if (process.env.NODE_ENV === 'production') {
+                        return res.status(201).json({
+                            success: true,
+                            message: 'Registration updated! However, we could not send the verification email at this time. Please try to resend the verification code later.',
+                            emailError: true,
+                            data: {
+                                user: {
+                                    id: existingUser._id,
+                                    email: existingUser.email,
+                                    isEmailVerified: existingUser.isEmailVerified
+                                }
+                            }
+                        });
+                    }
                 }
 
                 return res.status(201).json({
@@ -127,16 +160,49 @@ export const register = async (req, res) => {
             emailVerificationExpires: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
         });
 
-        // Send verification email (non-blocking)
+        // Send verification email (with proper error handling for production)
         try {
             const emailResult = await sendEmailVerificationCode(user, verificationCode);
             if (emailResult && !emailResult.error) {
                 console.log('Verification email sent successfully');
             } else {
                 console.error('Verification email failed:', emailResult?.error || 'Unknown error');
+
+                // In production, if email fails, we should still allow registration
+                // but inform the user about the email issue
+                if (process.env.NODE_ENV === 'production') {
+                    return res.status(201).json({
+                        success: true,
+                        message: 'Registration successful! However, there was an issue sending the verification email. Please try to resend the verification code.',
+                        emailWarning: true,
+                        data: {
+                            user: {
+                                id: user._id,
+                                email: user.email,
+                                isEmailVerified: user.isEmailVerified
+                            }
+                        }
+                    });
+                }
             }
         } catch (err) {
             console.error('Verification email failed:', err);
+
+            // In production, if email completely fails, still allow registration
+            if (process.env.NODE_ENV === 'production') {
+                return res.status(201).json({
+                    success: true,
+                    message: 'Registration successful! However, we could not send the verification email at this time. Please try to resend the verification code later.',
+                    emailError: true,
+                    data: {
+                        user: {
+                            id: user._id,
+                            email: user.email,
+                            isEmailVerified: user.isEmailVerified
+                        }
+                    }
+                });
+            }
         }
 
         res.status(201).json({
@@ -592,19 +658,48 @@ export const resendVerificationCode = async (req, res) => {
             const emailResult = await sendEmailVerificationCode(user, verificationCode);
             if (emailResult && !emailResult.error) {
                 console.log('Verification email resent successfully');
+                return res.status(200).json({
+                    success: true,
+                    message: 'Verification code sent successfully! Please check your email.'
+                });
             } else {
                 console.error('Verification email failed:', emailResult?.error || 'Unknown error');
-                // Still return success to user since the verification code is saved
+
+                // In production, return error if email fails
+                if (process.env.NODE_ENV === 'production') {
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to send verification email. Please check your email configuration or try again later.',
+                        error: emailResult?.error || 'Email service unavailable'
+                    });
+                }
+
+                // In development, still return success for testing
+                return res.status(200).json({
+                    success: true,
+                    message: 'Verification code generated (email sending failed in development mode).',
+                    emailWarning: true
+                });
             }
         } catch (err) {
             console.error('Verification email failed:', err);
-            // Still return success to user since the verification code is saved
-        }
 
-        res.status(200).json({
-            success: true,
-            message: 'Verification code sent successfully! Please check your email.'
-        });
+            // In production, return error if email completely fails
+            if (process.env.NODE_ENV === 'production') {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Email service is currently unavailable. Please try again later.',
+                    error: err.message
+                });
+            }
+
+            // In development, still return success for testing
+            return res.status(200).json({
+                success: true,
+                message: 'Verification code generated (email sending failed in development mode).',
+                emailError: true
+            });
+        }
     } catch (error) {
         console.error('Resend verification error:', error);
         res.status(500).json({
