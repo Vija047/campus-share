@@ -210,8 +210,6 @@ const connectDB = async (retryCount = 0) => {
       connectTimeoutMS: 15000, // 15 seconds
       heartbeatFrequencyMS: 10000, // 10 seconds
       maxIdleTimeMS: 30000, // 30 seconds
-      bufferCommands: false,
-      bufferMaxEntries: 0,
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn;
