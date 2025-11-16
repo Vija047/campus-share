@@ -11,10 +11,10 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: 3000,
-      allowedHosts: ['campus-share-2.onrender.com', 'localhost', '127.0.0.1'],
+      allowedHosts: ['campus-share-frontend.onrender.com', 'localhost', '127.0.0.1'],
       proxy: {
         '/api': {
-          target: isProduction ? 'https://campus-share.onrender.com' : 'http://localhost:5000',
+          target: isProduction ? 'https://campus-share-backend.onrender.com' : 'http://localhost:5000',
           changeOrigin: true,
           secure: isProduction,
         },

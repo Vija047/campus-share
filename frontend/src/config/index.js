@@ -3,7 +3,7 @@ export const config = {
     // API Configuration
     api: {
         baseUrl: import.meta.env.VITE_API_URL ||
-            (window.location.hostname.includes('onrender.com')
+            (window.location.hostname.includes('onrender.com') || window.location.hostname.includes('campus-share')
                 ? 'https://campus-share-backend.onrender.com'
                 : 'http://localhost:5000'),
         timeout: import.meta.env.PROD ? 120000 : 30000,
@@ -14,7 +14,7 @@ export const config = {
     // Socket Configuration
     socket: {
         url: import.meta.env.VITE_SOCKET_URL ||
-            (window.location.hostname.includes('onrender.com')
+            (window.location.hostname.includes('onrender.com') || window.location.hostname.includes('campus-share')
                 ? 'https://campus-share-backend.onrender.com'
                 : 'http://localhost:5000'),
         options: {

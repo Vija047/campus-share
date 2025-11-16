@@ -11,6 +11,7 @@ const getApiBaseUrl = () => {
     // Fallback logic based on hostname
     const hostname = window.location.hostname;
 
+    // Production deployment on Render
     if (hostname.includes('onrender.com') || hostname.includes('campus-share')) {
         return 'https://campus-share-backend.onrender.com';
     }

@@ -40,11 +40,11 @@ const UploadNote = () => {
     React.useEffect(() => {
         const checkBackend = async () => {
             try {
-                const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-share.onrender.com/api';
+                const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-share-backend.onrender.com';
                 const response = await fetch(`${apiUrl}/test`, {
                     timeout: 5000
                 });
-                if (response.ok) {
+                if (response.ok) {  
                     setBackendStatus('connected');
                     console.log('Backend connection successful');
                 } else {
