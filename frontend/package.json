@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "cross-env NODE_ENV=production vite build --mode production",
+    "build:fallback": "vite build --mode production",
     "build:prod": "npm run clean && cross-env NODE_ENV=production vite build",
     "lint": "eslint .",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
@@ -16,6 +17,7 @@
     "@headlessui/react": "^2.2.7",
     "@tailwindcss/vite": "^4.1.13",
     "axios": "^1.11.0",
+    "cross-env": "^7.0.3",
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -29,7 +31,6 @@
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
-    "cross-env": "^7.0.3",
     "envify": "^4.1.0",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
