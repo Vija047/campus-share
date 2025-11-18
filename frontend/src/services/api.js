@@ -5,30 +5,37 @@ import toast from 'react-hot-toast';
 const getApiBaseUrl = () => {
     // Check if we have environment variables set
     if (import.meta.env.VITE_API_URL) {
+        console.log('Using VITE_API_URL:', import.meta.env.VITE_API_URL);
         return import.meta.env.VITE_API_URL;
     }
 
     // Fallback logic based on hostname
     const hostname = window.location.hostname;
+    console.log('Determining API URL for hostname:', hostname);
 
-    // Production deployment on Render
-    if (hostname.includes('onrender.com') || hostname.includes('campus-share')) {
+    // Production deployment on Render or Vercel
+    if (hostname.includes('onrender.com') || 
+        hostname.includes('campus-share') || 
+        hostname.includes('vercel.app')) {
+        console.log('Production deployment detected, using production API');
         return 'https://campus-share.onrender.com';
     }
 
     // Local development - check the actual port
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        console.log('Local development detected');
         return 'http://localhost:5000';
     }
 
-    // Default fallback
+    // Default fallback with warning
+    console.warn('Using fallback API URL for hostname:', hostname);
     return 'http://localhost:5000';
 };
 
 // Create axios instance with base configuration
 const api = axios.create({
     baseURL: getApiBaseUrl(),
-    timeout: import.meta.env.PROD ? 120000 : 30000, // Longer timeout for production
+    timeout: import.meta.env.PROD ? 180000 : 60000, // Extended timeout for file uploads
     headers: {
         'Content-Type': 'application/json',
     },

@@ -3,10 +3,12 @@ export const config = {
     // API Configuration
     api: {
         baseUrl: import.meta.env.VITE_API_URL ||
-            (window.location.hostname.includes('onrender.com') || window.location.hostname.includes('campus-share')
+            (window.location.hostname.includes('onrender.com') || 
+             window.location.hostname.includes('campus-share') ||
+             window.location.hostname.includes('vercel.app')
                 ? 'https://campus-share.onrender.com'
                 : 'http://localhost:5000'),
-        timeout: import.meta.env.PROD ? 120000 : 30000,
+        timeout: import.meta.env.PROD ? 180000 : 60000, // Extended for file uploads
         retryAttempts: import.meta.env.PROD ? 3 : 1,
         retryDelay: 2000,
     },
@@ -14,7 +16,9 @@ export const config = {
     // Socket Configuration
     socket: {
         url: import.meta.env.VITE_SOCKET_URL ||
-            (window.location.hostname.includes('onrender.com') || window.location.hostname.includes('campus-share')
+            (window.location.hostname.includes('onrender.com') || 
+             window.location.hostname.includes('campus-share') ||
+             window.location.hostname.includes('vercel.app')
                 ? 'https://campus-share.onrender.com'
                 : 'http://localhost:5000'),
         options: {
@@ -41,6 +45,23 @@ export const config = {
         enableChat: true,
         enableNotifications: true,
         enableOfflineMode: import.meta.env.PROD,
+    },
+
+    // Upload configuration
+    upload: {
+        maxFileSize: parseInt(import.meta.env.VITE_MAX_FILE_SIZE) || 52428800, // 50MB default
+        allowedFileTypes: import.meta.env.VITE_ALLOWED_FILE_TYPES?.split(',') || [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'text/plain',
+            'image/jpeg',
+            'image/png',
+            'image/jpg',
+            'image/gif'
+        ]
     }
 };
 

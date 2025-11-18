@@ -19,6 +19,7 @@ import Input from '../components/common/Input.jsx';
 import Textarea from '../components/common/Textarea.jsx';
 import Select from '../components/common/Select.jsx';
 import toast from 'react-hot-toast';
+import { config } from '../config/index.js';
 
 const UploadNote = () => {
     const { user } = useAuth();
@@ -40,10 +41,22 @@ const UploadNote = () => {
     React.useEffect(() => {
         const checkBackend = async () => {
             try {
-                const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-share.onrender.com';
-                const response = await fetch(`${apiUrl}/test`, {
-                    timeout: 5000
+                const apiUrl = import.meta.env.VITE_API_URL || 
+                    (window.location.hostname.includes('onrender.com') || 
+                     window.location.hostname.includes('campus-share') || 
+                     window.location.hostname.includes('vercel.app')
+                        ? 'https://campus-share.onrender.com' 
+                        : 'http://localhost:5000');
+                
+                console.log('Checking backend connectivity at:', apiUrl);
+                const response = await fetch(`${apiUrl}/api/test`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
                 });
+                
                 if (response.ok) {
                     setBackendStatus('connected');
                     console.log('Backend connection successful');
@@ -54,8 +67,17 @@ const UploadNote = () => {
             } catch (error) {
                 console.error('Backend connectivity check failed:', error);
                 setBackendStatus('disconnected');
+                
+                // Show warning in development but not in production to avoid spam
+                if (import.meta.env.DEV) {
+                    toast.error('Backend connection failed. Upload may not work.', {
+                        duration: 3000,
+                        id: 'backend-connection' // Prevent duplicate toasts
+                    });
+                }
             }
         };
+        
         checkBackend();
 
         // Recheck every 30 seconds if disconnected
@@ -83,19 +105,8 @@ const UploadNote = () => {
             size: file.size
         });
 
-        // Validate file type
-        const allowedTypes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-powerpoint',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'text/plain',
-            'image/jpeg',
-            'image/png',
-            'image/jpg',
-            'image/gif'
-        ];
+        // Validate file type using config
+        const allowedTypes = config.upload.allowedFileTypes;
 
         if (!allowedTypes.includes(file.type)) {
             console.error('Invalid file type:', file.type);
@@ -103,10 +114,11 @@ const UploadNote = () => {
             return;
         }
 
-        // Validate file size (max 50MB)
-        const maxSize = 50 * 1024 * 1024; // 50MB
+        // Validate file size using config
+        const maxSize = config.upload.maxFileSize;
         if (file.size > maxSize) {
-            toast.error(`File size (${formatFileSize(file.size)}) exceeds the 50MB limit`);
+            const maxSizeMB = Math.round(maxSize / (1024 * 1024));
+            toast.error(`File size (${formatFileSize(file.size)}) exceeds the ${maxSizeMB}MB limit`);
             return;
         }
 
@@ -205,6 +217,14 @@ const UploadNote = () => {
 
         try {
             setLoading(true);
+            
+            // Production-specific validation
+            if (import.meta.env.PROD && backendStatus === 'disconnected') {
+                toast.error('Backend is not available. Please wait a moment and try again.', {
+                    duration: 5000
+                });
+                return;
+            }
 
             const uploadData = new FormData();
             uploadData.append('title', formData.title.trim());
@@ -223,12 +243,25 @@ const UploadNote = () => {
                 fileName: formData.file.name,
                 fileSize: formData.file.size,
                 fileType: formData.file.type,
-                apiUrl: import.meta.env.VITE_API_URL
+                apiUrl: import.meta.env.VITE_API_URL,
+                environment: import.meta.env.MODE,
+                production: import.meta.env.PROD
             });
 
-            await noteService.uploadNote(uploadData);
+            // Show loading message for large files
+            if (formData.file.size > 5 * 1024 * 1024) { // 5MB
+                toast.loading('Uploading large file... This may take a few minutes.', {
+                    id: 'upload-progress',
+                    duration: 10000
+                });
+            }
 
-            toast.success('Note uploaded successfully!');
+            await noteService.uploadNote(uploadData);
+            
+            toast.dismiss('upload-progress'); // Dismiss loading toast
+            toast.success('Note uploaded successfully!', {
+                duration: 4000
+            });
             navigate('/notes');
         } catch (error) {
             console.error('Upload error:', error);

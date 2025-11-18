@@ -37,8 +37,10 @@ const getAllowedOrigins = () => {
   const envOrigins = process.env.ALLOWED_ORIGINS;
   const defaultOrigins = [
     'https://campus-share-six.vercel.app',
+    'https://campus-share-frontend.onrender.com',
     'https://localhost:3000',
-    'http://localhost:5173'
+    'http://localhost:5173',
+    'http://localhost:3000'
   ];
 
   if (envOrigins) {
@@ -76,6 +78,12 @@ app.use(cors({
       return cb(null, true);
     }
 
+    // Additional check for Render deployments
+    if (origin.includes('onrender.com') && origin.includes('campus-share')) {
+      console.log('Allowing Render deployment:', origin);
+      return cb(null, true);
+    }
+
     console.warn('CORS blocked origin:', origin, 'Allowed origins:', allowedOrigins);
     return cb(new Error('Not allowed by CORS'), false);
   },
@@ -86,9 +94,9 @@ app.use(cors({
   maxAge: 86400 // 24 hours
 }));
 
-// Body parser
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Body parser with larger limits for file uploads
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Rate limiter
 app.use(generalLimiter);

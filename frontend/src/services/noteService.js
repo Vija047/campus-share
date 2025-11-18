@@ -4,8 +4,31 @@ export const noteService = {
     // Upload note
     uploadNote: async (formData) => {
         console.log('Uploading note via noteService...');
+        
+        // Calculate timeout based on file size and environment
+        const fileSize = formData.get('file')?.size || 0;
+        const baseTimeout = import.meta.env.PROD ? 180000 : 60000; // 3 minutes in production, 1 minute in development
+        const sizeMultiplier = Math.max(1, Math.floor(fileSize / (10 * 1024 * 1024))); // Add time for every 10MB
+        const timeout = baseTimeout * sizeMultiplier;
+        
+        console.log('Upload timeout calculated:', {
+            fileSize,
+            timeout,
+            environment: import.meta.env.MODE
+        });
+        
         const response = await api.post('/api/notes/upload', formData, {
-            timeout: 60000, // 60 seconds for file uploads
+            timeout,
+            // Don't set Content-Type header, let the browser set it with boundary for FormData
+            headers: {
+                // Remove Content-Type to let browser set multipart/form-data with boundary
+            },
+            onUploadProgress: (progressEvent) => {
+                if (progressEvent.total) {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    console.log(`Upload progress: ${percentCompleted}%`);
+                }
+            }
         });
         return response.data;
     },
