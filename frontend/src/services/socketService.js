@@ -12,7 +12,7 @@ class SocketService {
         }
 
         // Use environment variable for socket URL, fallback to localhost for development
-        const socketUrl = import.meta.env.VITE_SOCKET_URL || 'https://campus-share-backend.onrender.com';
+        const socketUrl = import.meta.env.VITE_SOCKET_URL || 'ttps://campus-share.onrender.com';
 
         try {
             this.socket = io(socketUrl, {

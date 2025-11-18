@@ -13,7 +13,7 @@ const getApiBaseUrl = () => {
 
     // Production deployment on Render
     if (hostname.includes('onrender.com') || hostname.includes('campus-share')) {
-        return 'https://campus-share-backend.onrender.com';
+        return 'ttps://campus-share.onrender.com';
     }
 
     // Local development - check the actual port

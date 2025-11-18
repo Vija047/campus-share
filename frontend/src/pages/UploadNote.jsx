@@ -40,7 +40,7 @@ const UploadNote = () => {
     React.useEffect(() => {
         const checkBackend = async () => {
             try {
-                const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-share-backend.onrender.com';
+                const apiUrl = import.meta.env.VITE_API_URL || 'ttps://campus-share.onrender.com';
                 const response = await fetch(`${apiUrl}/test`, {
                     timeout: 5000
                 });
