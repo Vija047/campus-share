@@ -109,15 +109,7 @@ const userSchema = new mongoose.Schema({
     },
     isEmailVerified: {
         type: Boolean,
-        default: false
-    },
-    emailVerificationCode: {
-        type: String,
-        select: false
-    },
-    emailVerificationExpires: {
-        type: Date,
-        select: false
+        default: true  // Set to true by default since we're removing email verification
     },
     failedLoginAttempts: {
         type: Number,

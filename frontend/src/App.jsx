@@ -7,7 +7,6 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
-import EmailVerification from './pages/EmailVerification';
 
 import Dashboard from './pages/Dashboard';
 import UploadNote from './pages/UploadNote';
@@ -39,7 +38,6 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/verify-email" element={<EmailVerification />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
 
                 <Route path="/notes" element={<Notes />} />

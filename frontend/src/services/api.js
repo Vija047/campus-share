@@ -16,7 +16,12 @@ const getApiBaseUrl = () => {
         return 'https://campus-share-backend.onrender.com';
     }
 
-    // Local development
+    // Local development - check the actual port
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:5000';
+    }
+
+    // Default fallback
     return 'http://localhost:5000';
 };
 
@@ -29,6 +34,9 @@ const api = axios.create({
     },
     withCredentials: false,
 });
+
+// Log the base URL for debugging
+console.log('API Base URL:', api.defaults.baseURL);
 
 // Request interceptor to add auth token
 api.interceptors.request.use(

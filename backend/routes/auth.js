@@ -7,9 +7,7 @@ import {
     updateProfile,
     forgotPassword,
     verifyOTP,
-    resetPassword,
-    verifyEmail,
-    resendVerificationCode
+    resetPassword
 } from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
@@ -98,33 +96,11 @@ const resetPasswordValidation = [
         .withMessage('New password must be at least 6 characters long')
 ];
 
-const verifyEmailValidation = [
-    body('email')
-        .isEmail()
-        .normalizeEmail()
-        .withMessage('Please enter a valid email'),
-    body('verificationCode')
-        .isLength({ min: 6, max: 6 })
-        .isNumeric()
-        .withMessage('Verification code must be a 6-digit number')
-];
-
-const resendVerificationValidation = [
-    body('email')
-        .isEmail()
-        .normalizeEmail()
-        .withMessage('Please enter a valid email')
-];
-
 
 
 // Routes
 router.post('/register', registrationLimiter, registerValidation, handleValidationErrorsDetailed, register);
 router.post('/login', loginLimiter, loginValidation, handleValidationErrorsDetailed, login);
-
-// Email verification routes
-router.post('/verify-email', authLimiter, verifyEmailValidation, handleValidationErrorsDetailed, verifyEmail);
-router.post('/resend-verification', passwordResetLimiter, resendVerificationValidation, handleValidationErrorsDetailed, resendVerificationCode);
 
 router.post('/forgot-password', passwordResetLimiter, forgotPasswordValidation, handleValidationErrorsDetailed, forgotPassword);
 router.post('/verify-otp', authLimiter, verifyOTPValidation, handleValidationErrorsDetailed, verifyOTP);

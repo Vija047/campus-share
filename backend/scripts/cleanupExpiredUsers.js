@@ -11,14 +11,13 @@ const __dirname = path.dirname(__filename);
 // Load environment variables from the correct path
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const cleanupExpiredUsers = async () => {
+// Function to clean up expired unverified users (for import by other modules)
+export const cleanupExpiredUnverifiedUsers = async () => {
     try {
-        console.log('Starting expired users cleanup script...');
-        console.log('MongoDB URI:', process.env.MONGODB_URI ? 'Found' : 'Not found');
+        console.log('Cleaning up expired unverified users...');
 
-        // Connect to MongoDB
-        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/student-notes-hub');
-        console.log('Connected to MongoDB successfully!');
+        // No need to connect to MongoDB here as it should already be connected
+        // when called from other modules
 
         // Find expired unverified users
         const expiredUsers = await User.find({
@@ -29,12 +28,6 @@ const cleanupExpiredUsers = async () => {
         console.log(`Found ${expiredUsers.length} expired unverified users`);
 
         if (expiredUsers.length > 0) {
-            // Log the users that will be deleted
-            console.log('Users to be deleted:');
-            expiredUsers.forEach(user => {
-                console.log(`- ${user.email} (expired: ${user.emailVerificationExpires})`);
-            });
-
             // Delete expired unverified users
             const result = await User.deleteMany({
                 isEmailVerified: false,
@@ -42,9 +35,29 @@ const cleanupExpiredUsers = async () => {
             });
 
             console.log(`Successfully deleted ${result.deletedCount} expired unverified users`);
+            return result.deletedCount;
         } else {
             console.log('No expired unverified users found');
+            return 0;
         }
+    } catch (error) {
+        console.error('Error in cleanup function:', error);
+        return 0;
+    }
+};
+
+// Main cleanup function for script execution
+const cleanupExpiredUsers = async () => {
+    try {
+        console.log('Starting expired users cleanup script...');
+        console.log('MongoDB URI:', process.env.MONGODB_URI ? 'Found' : 'Not found');
+
+        // Connect to MongoDB
+        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/student-notes-hub');
+        console.log('Connected to MongoDB successfully!');
+
+        // Call the cleanup function
+        const deletedCount = await cleanupExpiredUnverifiedUsers();
 
         // Also show stats
         const totalUsers = await User.countDocuments();
@@ -66,4 +79,7 @@ const cleanupExpiredUsers = async () => {
     }
 };
 
-cleanupExpiredUsers();
+// Only run the script if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+    cleanupExpiredUsers();
+}

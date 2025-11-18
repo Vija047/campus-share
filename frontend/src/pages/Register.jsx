@@ -128,8 +128,8 @@ const Register = () => {
 
         const result = await register(formData);
         if (result.success) {
-            // Redirect to email verification page with email as parameter
-            navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`, { replace: true });
+            // Registration complete, redirect to dashboard
+            navigate('/dashboard', { replace: true });
         }
     };
 

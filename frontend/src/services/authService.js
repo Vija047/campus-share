@@ -71,21 +71,5 @@ export const authService = {
         return response.data;
     },
 
-    // Verify email
-    verifyEmail: async (email, verificationCode) => {
-        const response = await api.post('/api/auth/verify-email', { email, verificationCode });
-        if (response.data.success && response.data.data?.token) {
-            localStorage.setItem('token', response.data.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.data.user));
-        }
-        return response.data;
-    },
-
-    // Resend verification code
-    resendVerificationCode: async (email) => {
-        const response = await api.post('/api/auth/resend-verification', { email });
-        return response.data;
-    },
-
 
 };
