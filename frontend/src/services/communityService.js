@@ -31,43 +31,43 @@ export const communityService = {
 
     // Get single post with full details
     getPostDetails: async (postId) => {
-        const response = await api.get(`/posts/${postId}`);
+        const response = await api.get(`/api/posts/${postId}`);
         return response.data;
     },
 
     // Vote on a post
     voteOnPost: async (postId, voteType) => {
-        const response = await api.post(`/posts/${postId}/vote`, { voteType });
+        const response = await api.post(`/api/posts/${postId}/vote`, { voteType });
         return response.data;
     },
 
     // Add reply to post
     replyToPost: async (postId, content) => {
-        const response = await api.post(`/posts/${postId}/reply`, { content });
+        const response = await api.post(`/api/posts/${postId}/reply`, { content });
         return response.data;
     },
 
     // Delete post (if user owns it)
     deletePost: async (postId) => {
-        const response = await api.delete(`/posts/${postId}`);
+        const response = await api.delete(`/api/posts/${postId}`);
         return response.data;
     },
 
     // Get trending posts
     getTrendingPosts: async (limit = 10) => {
-        const response = await api.get(`/posts?sort=votes&sortOrder=desc&limit=${limit}`);
+        const response = await api.get(`/api/posts?sort=votes&sortOrder=desc&limit=${limit}`);
         return response.data;
     },
 
     // Get recent posts
     getRecentPosts: async (limit = 10) => {
-        const response = await api.get(`/posts?sort=createdAt&sortOrder=desc&limit=${limit}`);
+        const response = await api.get(`/api/posts?sort=createdAt&sortOrder=desc&limit=${limit}`);
         return response.data;
     },
 
     // Get posts by semester
     getPostsBySemester: async (semester, limit = 20) => {
-        const response = await api.get(`/posts?semester=${semester}&limit=${limit}&sort=createdAt&sortOrder=desc`);
+        const response = await api.get(`/api/posts?semester=${semester}&limit=${limit}&sort=createdAt&sortOrder=desc`);
         return response.data;
     },
 
@@ -78,7 +78,7 @@ export const communityService = {
             ...filters
         });
 
-        const response = await api.get(`/posts?${params.toString()}`);
+        const response = await api.get(`/api/posts?${params.toString()}`);
         return response.data;
     },
 
@@ -103,14 +103,14 @@ export const communityService = {
 
     // Get user's posts
     getUserPosts: async (userId, page = 1, limit = 10) => {
-        const response = await api.get(`/posts?author=${userId}&page=${page}&limit=${limit}`);
+        const response = await api.get(`/api/posts?author=${userId}&page=${page}&limit=${limit}`);
         return response.data;
     },
 
     // Report a post
     reportPost: async (postId, reason) => {
         try {
-            const response = await api.post(`/posts/${postId}/report`, { reason });
+            const response = await api.post(`/api/posts/${postId}/report`, { reason });
             return response.data;
         } catch (error) {
             console.error('Report functionality not implemented:', error);

@@ -20,19 +20,19 @@ export const noteService = {
             }
         });
 
-        const response = await api.get(`/notes?${params.toString()}`);
+        const response = await api.get(`/api/notes?${params.toString()}`);
         return response.data;
     },
 
     // Get single note
     getNote: async (id) => {
-        const response = await api.get(`/notes/${id}`);
+        const response = await api.get(`/api/notes/${id}`);
         return response.data;
     },
 
     // Toggle like on note
     toggleLike: async (id) => {
-        const response = await api.post(`/notes/${id}/like`);
+        const response = await api.post(`/api/notes/${id}/like`);
         return response.data;
     },
 
@@ -49,7 +49,7 @@ export const noteService = {
 
             console.log(`Attempting to download note with ID: ${cleanId}`);
 
-            const response = await api.get(`/notes/${cleanId}/download`, {
+            const response = await api.get(`/api/notes/${cleanId}/download`, {
                 timeout: 30000, // 30 seconds for download requests
             });
 
@@ -99,7 +99,7 @@ export const noteService = {
     // View note in browser
     viewNote: async (id) => {
         try {
-            const response = await api.get(`/notes/${id}/view`, {
+            const response = await api.get(`/api/notes/${id}/view`, {
                 timeout: 30000, // 30 seconds for view requests
             });
 
@@ -138,7 +138,7 @@ export const noteService = {
 
     // Generate share link
     generateShareLink: async (id) => {
-        const response = await api.post(`/notes/${id}/share`);
+        const response = await api.post(`/api/notes/${id}/share`);
         return response.data;
     },
 
@@ -146,7 +146,7 @@ export const noteService = {
     toggleBookmark: async (id) => {
         try {
             console.log('Calling toggle bookmark API for note:', id);
-            const response = await api.post(`/notes/${id}/bookmark`, {}, {
+            const response = await api.post(`/api/notes/${id}/bookmark`, {}, {
                 timeout: 10000 // 10 second timeout
             });
             console.log('Toggle bookmark API response:', response.data);
@@ -162,20 +162,20 @@ export const noteService = {
 
     // Get bookmarked notes
     getBookmarkedNotes: async (page = 1) => {
-        const response = await api.get(`/notes/bookmarked?page=${page}`);
+        const response = await api.get(`/api/notes/bookmarked?page=${page}`);
         return response.data;
     },
 
     // Get my uploaded notes
     getMyNotes: async (page = 1) => {
-        const response = await api.get(`/notes/my-notes?page=${page}`);
+        const response = await api.get(`/api/notes/my-notes?page=${page}`);
         return response.data;
     },
 
     // Check if file exists for a note
     checkFileExists: async (id) => {
         try {
-            const response = await api.get(`/notes/${id}/check-file`, {
+            const response = await api.get(`/api/notes/${id}/check-file`, {
                 timeout: 10000, // 10 seconds
             });
             return response.data;
@@ -195,7 +195,7 @@ export const noteService = {
     // Generate AI summary for a note
     generateAISummary: async (id) => {
         try {
-            const response = await api.post(`/notes/${id}/generate-ai-summary`, {}, {
+            const response = await api.post(`/api/notes/${id}/generate-ai-summary`, {}, {
                 timeout: 60000, // 60 seconds for AI processing
             });
             return response.data;
