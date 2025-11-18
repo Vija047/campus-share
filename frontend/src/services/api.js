@@ -13,7 +13,7 @@ const getApiBaseUrl = () => {
 
     // Production deployment on Render
     if (hostname.includes('onrender.com') || hostname.includes('campus-share')) {
-        return 'ttps://campus-share.onrender.com';
+        return 'https://campus-share.onrender.com';
     }
 
     // Local development - check the actual port
@@ -51,9 +51,20 @@ api.interceptors.request.use(
             delete config.headers['Content-Type'];
         }
 
+        // Log request details for debugging uploads
+        if (config.url?.includes('/upload')) {
+            console.log('Making upload request:', {
+                url: `${config.baseURL}${config.url}`,
+                method: config.method,
+                hasAuth: !!token,
+                isFormData: config.data instanceof FormData
+            });
+        }
+
         return config;
     },
     (error) => {
+        console.error('Request interceptor error:', error);
         return Promise.reject(error);
     }
 );

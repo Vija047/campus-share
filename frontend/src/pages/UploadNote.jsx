@@ -40,11 +40,11 @@ const UploadNote = () => {
     React.useEffect(() => {
         const checkBackend = async () => {
             try {
-                const apiUrl = import.meta.env.VITE_API_URL || 'ttps://campus-share.onrender.com';
+                const apiUrl = import.meta.env.VITE_API_URL || 'https://campus-share.onrender.com';
                 const response = await fetch(`${apiUrl}/test`, {
                     timeout: 5000
                 });
-                if (response.ok) {  
+                if (response.ok) {
                     setBackendStatus('connected');
                     console.log('Backend connection successful');
                 } else {
@@ -222,7 +222,8 @@ const UploadNote = () => {
                 examType: formData.examType,
                 fileName: formData.file.name,
                 fileSize: formData.file.size,
-                fileType: formData.file.type
+                fileType: formData.file.type,
+                apiUrl: import.meta.env.VITE_API_URL
             });
 
             await noteService.uploadNote(uploadData);
@@ -231,6 +232,17 @@ const UploadNote = () => {
             navigate('/notes');
         } catch (error) {
             console.error('Upload error:', error);
+            console.error('Error details:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                config: {
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    baseURL: error.config?.baseURL
+                }
+            });
+
             let errorMessage = 'Failed to upload note';
 
             if (error.response?.data?.message) {
@@ -245,6 +257,10 @@ const UploadNote = () => {
                 errorMessage = 'Invalid file type. Please upload PDF, DOC, DOCX, PPT, PPTX, TXT, or image files.';
             } else if (error.response?.status === 401) {
                 errorMessage = 'Authentication failed. Please log in again.';
+                // Redirect to login after a delay
+                setTimeout(() => {
+                    navigate('/login');
+                }, 2000);
             } else if (error.response?.status === 403) {
                 errorMessage = 'Access denied. Please check your permissions.';
             } else if (error.response?.status >= 500) {

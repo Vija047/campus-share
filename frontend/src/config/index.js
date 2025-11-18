@@ -4,7 +4,7 @@ export const config = {
     api: {
         baseUrl: import.meta.env.VITE_API_URL ||
             (window.location.hostname.includes('onrender.com') || window.location.hostname.includes('campus-share')
-                ? 'https://campus-share-backend.onrender.com'
+                ? 'https://campus-share.onrender.com'
                 : 'http://localhost:5000'),
         timeout: import.meta.env.PROD ? 120000 : 30000,
         retryAttempts: import.meta.env.PROD ? 3 : 1,
@@ -15,7 +15,7 @@ export const config = {
     socket: {
         url: import.meta.env.VITE_SOCKET_URL ||
             (window.location.hostname.includes('onrender.com') || window.location.hostname.includes('campus-share')
-                ? 'https://campus-share-backend.onrender.com'
+                ? 'https://campus-share.onrender.com'
                 : 'http://localhost:5000'),
         options: {
             transports: ['websocket', 'polling'],

@@ -37,9 +37,8 @@ const getAllowedOrigins = () => {
   const envOrigins = process.env.ALLOWED_ORIGINS;
   const defaultOrigins = [
     'https://campus-share-six.vercel.app',
-    'https://campus-share-delta.vercel.app',
-    'http://localhost:3000',
-    'https://localhost:3000'
+    'https://localhost:3000',
+    'http://localhost:5173'
   ];
 
   if (envOrigins) {
